@@ -11,8 +11,8 @@
 -- ============================================================
 
 INSERT INTO EDP_Metadata.LinkedServiceRef
-    (LinkedServiceName, Source_ID, Auth_ID, LinkedServiceConnectionString)
-SELECT v.LinkedServiceName, s.Source_ID, a.Auth_ID, v.LinkedServiceConnectionString
+    (LinkedServiceName, LinkedServiceConnectionName, Source_ID, Auth_ID, LinkedServiceConnectionString)
+SELECT v.LinkedServiceName, v.LinkedServiceName, s.Source_ID, a.Auth_ID, v.LinkedServiceConnectionString
 FROM (VALUES
 
     -- ══════════════════════════════════════════════════════

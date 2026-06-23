@@ -7,6 +7,6 @@
 
 IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.Watermark WHERE Watermark_ID = 1)
 BEGIN
-    INSERT INTO EDP_Metadata.Watermark (Value)
+    INSERT INTO EDP_Metadata.Watermark (Watermark_Value)
     VALUES (CAST('1999-01-01 00:00:00' AS DATETIME));
 END
