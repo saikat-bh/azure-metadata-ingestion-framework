@@ -16,10 +16,12 @@ BEGIN
     CREATE TABLE EDP_Metadata.SystemAuth (
         Auth_ID              INT            IDENTITY(1,1)  NOT NULL,
         Authentication_Type  NVARCHAR(100)  NOT NULL,
+        Auth_Ref             NVARCHAR(20)   NOT NULL,
         Connectors           NVARCHAR(500)  NOT NULL,
 
         CONSTRAINT PK_SystemAuth       PRIMARY KEY CLUSTERED (Auth_ID),
-        CONSTRAINT UQ_SystemAuth_Type  UNIQUE (Authentication_Type)
+        CONSTRAINT UQ_SystemAuth_Type  UNIQUE (Authentication_Type),
+        CONSTRAINT UQ_SystemAuth_Ref   UNIQUE (Auth_Ref)
     );
 END
 ELSE
@@ -33,5 +35,16 @@ BEGIN
     BEGIN
         ALTER TABLE EDP_Metadata.SystemAuth
         ADD Connectors NVARCHAR(500) NULL;
+    END
+
+    -- Add Auth_Ref column if upgrading from earlier version
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.columns
+        WHERE  object_id = OBJECT_ID('EDP_Metadata.SystemAuth')
+        AND    name = 'Auth_Ref'
+    )
+    BEGIN
+        ALTER TABLE EDP_Metadata.SystemAuth
+        ADD Auth_Ref NVARCHAR(20) NULL;
     END
 END
