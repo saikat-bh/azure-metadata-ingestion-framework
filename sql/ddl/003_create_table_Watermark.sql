@@ -15,7 +15,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE EDP_Metadata.Watermark (
         Watermark_ID   INT        IDENTITY(1,1)  NOT NULL,
-        Value          DATETIME2  NOT NULL,
+        Value          DATETIME   NOT NULL,
 
         CONSTRAINT PK_Watermark PRIMARY KEY CLUSTERED (Watermark_ID)
     );
