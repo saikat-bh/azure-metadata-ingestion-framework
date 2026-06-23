@@ -18,7 +18,8 @@ FROM (
         ('Excel'),
         ('XML'),
         ('Binary'),
-        ('Delta')
+        ('Delta'),
+        ('DelimitedText')
 ) AS v(Format)
 WHERE NOT EXISTS (
     SELECT 1
