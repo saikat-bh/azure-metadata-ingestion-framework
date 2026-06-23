@@ -1,0 +1,16 @@
+# Environment / secrets
+.env
+*.env
+local.settings.json
+
+# Azure credentials / temp
+*.pfx
+*.pem
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+*.suo
