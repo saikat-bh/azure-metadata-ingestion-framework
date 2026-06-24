@@ -19,7 +19,9 @@ FROM (
         ('XML'),
         ('Binary'),
         ('Delta'),
-        ('DelimitedText')
+        ('DelimitedText'),
+        ('Zip'),
+        ('Tar')
 ) AS v(Format)
 WHERE NOT EXISTS (
     SELECT 1

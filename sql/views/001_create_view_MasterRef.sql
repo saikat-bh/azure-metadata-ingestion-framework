@@ -5,6 +5,11 @@
 --          view to retrieve the complete runtime configuration
 --          for a given Metadata_Job in one query.
 --
+-- Architecture:
+--   MetadataRef.InputDataset_ID     → DatasetRef (Source + Format type)
+--   MetadataRef.InputLinkedServiceConnectionID → LinkedServiceRef (connection)
+--   MetadataRef.MetadataSettingsInput → runtime JSON (path, table, server …)
+--
 -- Decoded columns:
 --   ActivityType : 0 -> 'Ingress'      | 1 -> 'Egress'
 --   IsActive     : 0 -> 'InActive'     | 1 -> 'Active'
@@ -14,84 +19,96 @@
 CREATE OR ALTER VIEW EDP_Metadata.MasterRef
 AS
 SELECT
-    -- ── Job identity ─────────────────────────────────────────
+    -- ── Job identity ─────────────────────────────────────────────
     m.Metadata_ID,
     m.Metadata_Job,
 
-    -- ── Business domain ──────────────────────────────────────
+    -- ── Business domain ───────────────────────────────────────────
     bd.Business_Domain_Name,
 
-    -- ── ADF / trigger ────────────────────────────────────────
+    -- ── ADF / trigger ─────────────────────────────────────────────
     m.ADF_Name,
     m.Trigger_Name,
 
-    -- ── Input dataset + linked service ───────────────────────
-    ds_in.Dataset_Name                      AS InputDatasetName,
-    ls_in.LinkedServiceName                 AS InputLinkedServiceName,
-    ls_in.LinkedServiceConnectionName       AS InputLinkedServiceConnectionName,
-    ls_in.LinkedServiceConnectionString     AS InputLinkedServiceConnectionString,
-    ff_in.Format                            AS InputFileFormat,
-    ds_in.Schema_Name                       AS InputSchemaName,
-    ds_in.Table_Name                        AS InputTableName,
-    ds_in.Container                         AS InputContainer,
-    ds_in.FolderPath                        AS InputFolderPath,
-    ds_in.FileName                          AS InputFileName,
+    -- ── Input: dataset type ───────────────────────────────────────
+    ds_in.Dataset_Name                       AS InputDatasetName,
+    src_in.Source                            AS InputSource,
+    src_in.Source_Ref                        AS InputSourceRef,
+    ff_in.Format                             AS InputFileFormat,
 
-    -- ── Output dataset + linked service ──────────────────────
-    ds_out.Dataset_Name                     AS OutputDatasetName,
-    ls_out.LinkedServiceName                AS OutputLinkedServiceName,
-    ls_out.LinkedServiceConnectionName      AS OutputLinkedServiceConnectionName,
-    ls_out.LinkedServiceConnectionString    AS OutputLinkedServiceConnectionString,
-    ff_out.Format                           AS OutputFileFormat,
-    ds_out.Schema_Name                      AS OutputSchemaName,
-    ds_out.Table_Name                       AS OutputTableName,
-    ds_out.Container                        AS OutputContainer,
-    ds_out.FolderPath                       AS OutputFolderPath,
-    ds_out.FileName                         AS OutputFileName,
+    -- ── Input: linked service (connection) ────────────────────────
+    ls_in.LinkedServiceName                  AS InputLinkedServiceName,
+    ls_in.LinkedServiceConnectionName        AS InputLinkedServiceConnectionName,
+    ls_in.LinkedServiceConnectionString      AS InputLinkedServiceConnectionString,
 
-    -- ── Metadata settings (JSON) ─────────────────────────────
+    -- ── Output: dataset type ──────────────────────────────────────
+    ds_out.Dataset_Name                      AS OutputDatasetName,
+    src_out.Source                           AS OutputSource,
+    src_out.Source_Ref                       AS OutputSourceRef,
+    ff_out.Format                            AS OutputFileFormat,
+
+    -- ── Output: linked service (connection) ───────────────────────
+    ls_out.LinkedServiceName                 AS OutputLinkedServiceName,
+    ls_out.LinkedServiceConnectionName       AS OutputLinkedServiceConnectionName,
+    ls_out.LinkedServiceConnectionString     AS OutputLinkedServiceConnectionString,
+
+    -- ── Runtime parameters (JSON) ─────────────────────────────────
     m.MetadataSettingsInput,
     m.MetadataSettingsOutput,
 
-    -- ── Decoded flags ────────────────────────────────────────
+    -- ── Decoded flags ─────────────────────────────────────────────
     CASE m.ActivityType
         WHEN 0 THEN 'Ingress'
         WHEN 1 THEN 'Egress'
-    END                                     AS ActivityType,
+    END                                      AS ActivityType,
 
     CASE m.IsActive
         WHEN 0 THEN 'InActive'
         WHEN 1 THEN 'Active'
-    END                                     AS IsActive,
+    END                                      AS IsActive,
 
     CASE m.Load_Type
         WHEN 0 THEN 'Full Refresh'
         WHEN 1 THEN 'Incremental'
-    END                                     AS Load_Type,
+    END                                      AS Load_Type,
 
-    -- ── Watermark (NULL for Full Refresh jobs) ────────────────
+    -- ── Watermark (NULL for Full Refresh jobs) ────────────────────
     w.Watermark_Value,
     w.Watermark_Column,
 
-    -- ── Audit ────────────────────────────────────────────────
+    -- ── Audit ─────────────────────────────────────────────────────
     m.Created_Date,
     m.Modified_Date,
     m.Modified_By
 
 FROM       EDP_Metadata.MetadataRef        m
+
 LEFT JOIN  EDP_Metadata.BusinessDomainRef  bd
         ON bd.Business_Domain_ID           = m.Business_Domain_ID
+
+-- Input dataset type
 LEFT JOIN  EDP_Metadata.DatasetRef         ds_in
         ON ds_in.Dataset_ID                = m.InputDataset_ID
-LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_in
-        ON ls_in.LinkedService_ID          = ds_in.LinkedService_ID
+LEFT JOIN  EDP_Metadata.SourceRef          src_in
+        ON src_in.Source_ID                = ds_in.Source_ID
 LEFT JOIN  EDP_Metadata.FileFormat         ff_in
         ON ff_in.FileFormat_ID             = ds_in.FileFormat_ID
+
+-- Input linked service (from MetadataRef directly)
+LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_in
+        ON ls_in.LinkedService_ID          = m.InputLinkedServiceConnectionID
+
+-- Output dataset type
 LEFT JOIN  EDP_Metadata.DatasetRef         ds_out
         ON ds_out.Dataset_ID               = m.OutputDataset_ID
-LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_out
-        ON ls_out.LinkedService_ID         = ds_out.LinkedService_ID
+LEFT JOIN  EDP_Metadata.SourceRef          src_out
+        ON src_out.Source_ID               = ds_out.Source_ID
 LEFT JOIN  EDP_Metadata.FileFormat         ff_out
         ON ff_out.FileFormat_ID            = ds_out.FileFormat_ID
+
+-- Output linked service (from MetadataRef directly)
+LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_out
+        ON ls_out.LinkedService_ID         = m.OutputLinkedServiceConnectionID
+
 LEFT JOIN  EDP_Metadata.Watermark          w
         ON w.Watermark_ID                  = m.Watermark_ID;

@@ -11,8 +11,11 @@
 --   Load_Type      : 0 = Full Refresh  | 1 = Incremental
 --   Watermark_ID   : NULL for Full Refresh jobs; must reference a
 --                    dedicated Watermark row for Incremental jobs
---   InputDataset_ID  : FK to DatasetRef (source dataset)
---   OutputDataset_ID : FK to DatasetRef (target dataset)
+--   InputDataset_ID                : FK to DatasetRef — dataset type (Source + Format)
+--   OutputDataset_ID               : FK to DatasetRef — dataset type (Source + Format)
+--   InputLinkedServiceConnectionID : FK to LinkedServiceRef — which connection to use
+--   OutputLinkedServiceConnectionID: FK to LinkedServiceRef — which connection to use
+--   MetadataSettingsInput/Output   : JSON carrying runtime params (path, table, server etc.)
 -- ============================================================
 
 IF NOT EXISTS (
@@ -29,8 +32,10 @@ BEGIN
         Business_Domain_ID INT            NULL,
         ADF_Name           NVARCHAR(100)  NOT NULL,
         Trigger_Name       NVARCHAR(200)  NOT NULL,
-        InputDataset_ID    INT            NULL,
-        OutputDataset_ID   INT            NULL,
+        InputDataset_ID                  INT            NULL,
+        OutputDataset_ID                 INT            NULL,
+        InputLinkedServiceConnectionID   INT            NULL,
+        OutputLinkedServiceConnectionID  INT            NULL,
         MetadataSettingsInput  NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MetadataRef_SettingsInput  DEFAULT ('{}'),
         MetadataSettingsOutput NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MetadataRef_SettingsOutput DEFAULT ('{}'),
         ActivityType       BIT            NOT NULL  CONSTRAINT DF_MetadataRef_ActivityType DEFAULT (0),
@@ -58,6 +63,14 @@ BEGIN
         CONSTRAINT FK_MetadataRef_OutputDataset
             FOREIGN KEY (OutputDataset_ID)
             REFERENCES EDP_Metadata.DatasetRef (Dataset_ID),
+
+        CONSTRAINT FK_MetadataRef_InputLS
+            FOREIGN KEY (InputLinkedServiceConnectionID)
+            REFERENCES EDP_Metadata.LinkedServiceRef (LinkedService_ID),
+
+        CONSTRAINT FK_MetadataRef_OutputLS
+            FOREIGN KEY (OutputLinkedServiceConnectionID)
+            REFERENCES EDP_Metadata.LinkedServiceRef (LinkedService_ID),
 
         CONSTRAINT FK_MetadataRef_Watermark
             FOREIGN KEY (Watermark_ID)
@@ -98,6 +111,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'OutputDataset_ID')
         ALTER TABLE EDP_Metadata.MetadataRef ADD OutputDataset_ID INT NULL
             CONSTRAINT FK_MetadataRef_OutputDataset FOREIGN KEY REFERENCES EDP_Metadata.DatasetRef(Dataset_ID);
+
+    -- Add LinkedService FK columns (re-introduced after DatasetRef simplification)
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'InputLinkedServiceConnectionID')
+        ALTER TABLE EDP_Metadata.MetadataRef ADD InputLinkedServiceConnectionID INT NULL
+            CONSTRAINT FK_MetadataRef_InputLS FOREIGN KEY REFERENCES EDP_Metadata.LinkedServiceRef(LinkedService_ID);
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'OutputLinkedServiceConnectionID')
+        ALTER TABLE EDP_Metadata.MetadataRef ADD OutputLinkedServiceConnectionID INT NULL
+            CONSTRAINT FK_MetadataRef_OutputLS FOREIGN KEY REFERENCES EDP_Metadata.LinkedServiceRef(LinkedService_ID);
 
     -- Add audit columns
     IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'Created_Date')

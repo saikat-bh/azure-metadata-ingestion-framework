@@ -12,34 +12,36 @@
   .wizard-header { background:linear-gradient(135deg,#0078d4,#106ebe); color:#fff; padding:28px 36px; }
   .wizard-header h4 { margin:0; font-weight:600; }
   .wizard-header p  { margin:4px 0 0; opacity:.8; font-size:.88rem; }
-  .step-bar { display:flex; background:#f7f9fc; border-bottom:1px solid #e3e8ef; padding:0 36px; overflow-x:auto; }
-  .step-item { flex:1; min-width:90px; padding:14px 6px; text-align:center; font-size:.75rem; font-weight:600; color:#8a9bb0; border-bottom:3px solid transparent; cursor:pointer; transition:.2s; white-space:nowrap; }
+  .step-bar { display:flex; background:#f7f9fc; border-bottom:1px solid #e3e8ef; padding:0 28px; overflow-x:auto; }
+  .step-item { flex:1; min-width:80px; padding:13px 4px; text-align:center; font-size:.73rem; font-weight:600; color:#8a9bb0; border-bottom:3px solid transparent; cursor:pointer; transition:.2s; white-space:nowrap; }
   .step-item.active { color:#0078d4; border-color:#0078d4; }
   .step-item.done   { color:#107c41; border-color:#107c41; }
-  .step-item .sn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:.68rem; margin-right:4px; background:#e3e8ef; color:#555; }
+  .step-item .sn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:.67rem; margin-right:3px; background:#e3e8ef; color:#555; }
   .step-item.active .sn { background:#0078d4; color:#fff; }
   .step-item.done   .sn { background:#107c41; color:#fff; }
-  .wizard-body { padding:28px 36px; }
+  .wizard-body { padding:26px 34px; }
   .step-panel { display:none; }
   .step-panel.active { display:block; }
-  .section-label { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#0078d4; margin-bottom:10px; }
+  .slabel { font-size:.67rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#0078d4; margin-bottom:10px; }
   .field-group { background:#f7f9fc; border:1px solid #e3e8ef; border-radius:8px; padding:18px; margin-bottom:14px; }
-  .managed-badge { font-size:.68rem; padding:2px 7px; background:#e8f0fe; color:#1a73e8; border-radius:10px; }
-  .sql-output { background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:18px; font-family:'Cascadia Code','Fira Code',monospace; font-size:.8rem; line-height:1.7; white-space:pre-wrap; word-break:break-all; max-height:500px; overflow-y:auto; }
-  .nav-btns { display:flex; justify-content:space-between; margin-top:24px; padding-top:18px; border-top:1px solid #e3e8ef; }
-  .suggestion { font-size:.73rem; color:#0078d4; margin-top:3px; }
-  .vmsg { font-size:.73rem; margin-top:3px; }
+  .mbadge  { font-size:.67rem; padding:2px 7px; background:#e8f0fe; color:#1a73e8; border-radius:10px; }
+  .ubadge  { font-size:.67rem; padding:2px 7px; background:#e6f4ea; color:#137333; border-radius:10px; }
+  .sql-out { background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:18px; font-family:'Cascadia Code','Fira Code',monospace; font-size:.79rem; line-height:1.7; white-space:pre-wrap; word-break:break-all; max-height:520px; overflow-y:auto; }
+  .nav-btns { display:flex; justify-content:space-between; margin-top:22px; padding-top:16px; border-top:1px solid #e3e8ef; }
+  .sugg  { font-size:.72rem; color:#0078d4; margin-top:3px; }
+  .vmsg  { font-size:.72rem; margin-top:3px; }
   .vmsg.err  { color:#dc3545; }
   .vmsg.warn { color:#e67e22; }
   .vmsg.ok   { color:#107c41; }
-  .toggle-sub { font-size:.78rem; color:#888; margin-top:2px; }
-  #toastBox { position:fixed; bottom:24px; right:24px; z-index:9999; }
-  .known-panel { background:#fffbf0; border:1px dashed #f0ad4e; border-radius:6px; padding:12px 14px; margin-top:10px; font-size:.82rem; }
-  .known-panel textarea { font-size:.78rem; }
-  .summary-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #e3e8ef; font-size:.84rem; }
+  .toggle-sub { font-size:.77rem; color:#888; margin-top:2px; }
+  #toastBox  { position:fixed; bottom:22px; right:22px; z-index:9999; }
+  .known-panel { background:#fffbf0; border:1px dashed #f0ad4e; border-radius:6px; padding:11px 13px; margin-top:10px; font-size:.81rem; }
+  .ds-card { border:1px solid #dee2e6; border-radius:8px; padding:14px; background:#fff; margin-top:10px; }
+  .ds-card.selected { border-color:#0078d4; background:#f0f7ff; }
+  .summary-item { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #e3e8ef; font-size:.83rem; }
   .summary-item:last-child { border:none; }
-  input.is-valid, select.is-valid, textarea.is-valid { border-color:#198754!important; }
-  input.is-invalid, select.is-invalid, textarea.is-invalid { border-color:#dc3545!important; }
+  input.is-valid, select.is-valid { border-color:#198754!important; }
+  input.is-invalid, select.is-invalid { border-color:#dc3545!important; }
 </style>
 </head>
 <body>
@@ -49,237 +51,123 @@
     <p>Generate validated SQL INSERT scripts for the metadata-driven ingestion framework</p>
   </div>
 
-  <div class="step-bar" id="stepBar">
-    <div class="step-item active" data-step="1" onclick="goTo(1)"><span class="sn">1</span>Domain</div>
-    <div class="step-item"        data-step="2" onclick="goTo(2)"><span class="sn">2</span>Input Dataset</div>
-    <div class="step-item"        data-step="3" onclick="goTo(3)"><span class="sn">3</span>Output Dataset</div>
-    <div class="step-item"        data-step="4" onclick="goTo(4)"><span class="sn">4</span>Watermark</div>
-    <div class="step-item"        data-step="5" onclick="goTo(5)"><span class="sn">5</span>Metadata Job</div>
-    <div class="step-item"        data-step="6" onclick="goTo(6)"><span class="sn">6</span>Generate SQL</div>
+  <div class="step-bar">
+    <div class="step-item active" onclick="goTo(1)"><span class="sn">1</span>Domain</div>
+    <div class="step-item"        onclick="goTo(2)"><span class="sn">2</span>Input Dataset</div>
+    <div class="step-item"        onclick="goTo(3)"><span class="sn">3</span>Output Dataset</div>
+    <div class="step-item"        onclick="goTo(4)"><span class="sn">4</span>Watermark</div>
+    <div class="step-item"        onclick="goTo(5)"><span class="sn">5</span>Metadata Job</div>
+    <div class="step-item"        onclick="goTo(6)"><span class="sn">6</span>Generate SQL</div>
   </div>
 
   <div class="wizard-body">
 
-    <!-- ══════════════════════ STEP 1: DOMAIN -->
+    <!-- ══ STEP 1: DOMAIN ══════════════════════════════════════════ -->
     <div class="step-panel active" id="panel-1">
-      <div class="section-label">Business Domain
-        <span class="managed-badge ms-1">User-created table</span>
-      </div>
-
-      <!-- Known existing panel -->
+      <div class="slabel">Business Domain <span class="ubadge ms-1">User-created</span></div>
       <div class="known-panel">
-        <div class="fw-semibold mb-1"><i class="bi bi-shield-check text-warning me-1"></i>Duplicate Prevention — Existing Domain Names</div>
-        <div class="text-muted mb-2" style="font-size:.75rem">Paste domain names already in <code>EDP_Metadata.BusinessDomainRef</code> (comma-separated). The form will block duplicates.</div>
-        <textarea class="form-control form-control-sm" id="knownDomains" rows="2" placeholder="e.g. Finance, Sales, Operations" oninput="loadKnown('domains','knownDomains')"></textarea>
+        <div class="fw-semibold mb-1"><i class="bi bi-shield-check text-warning me-1"></i>Paste existing Domain Names (comma-separated) to prevent duplicates</div>
+        <textarea class="form-control form-control-sm" id="knownDomains" rows="2" placeholder="Finance, Sales, Operations" oninput="loadKnown('domains','knownDomains')"></textarea>
       </div>
-
       <div class="field-group mt-3">
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" id="newDomain" onchange="toggleDomain()">
           <label class="form-check-label fw-semibold" for="newDomain">Add a new Business Domain</label>
-          <div class="toggle-sub">Leave off if using an existing domain in Step 5</div>
+          <div class="toggle-sub">Leave off to use an existing domain</div>
         </div>
         <div id="domainFields" style="display:none">
           <label class="form-label">Business Domain Name <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="domainName" maxlength="100"
                  placeholder="e.g. Finance, Supply Chain, Analytics"
-                 oninput="liveValidate('domainName')" onblur="liveValidate('domainName')">
+                 oninput="liveValidateDomain()" onblur="liveValidateDomain()">
           <div class="vmsg" id="vmsg-domainName"></div>
-          <div class="suggestion"><i class="bi bi-lightbulb"></i> Allowed: letters, numbers, spaces, hyphens, underscores. Min 2 chars.</div>
+          <div class="sugg"><i class="bi bi-lightbulb"></i> Letters, numbers, spaces, hyphens, underscores. Min 2 chars. Must start with a letter.</div>
         </div>
       </div>
-
-      <div class="alert alert-secondary py-2 px-3" style="font-size:.8rem">
-        <i class="bi bi-lock-fill me-1"></i>
-        <strong>Managed tables (framework-level, not editable via this form):</strong>
-        SourceRef &bull; SystemAuth &bull; FileFormat &bull; LinkedServiceRef
+      <div class="alert alert-secondary py-2 px-3" style="font-size:.79rem">
+        <i class="bi bi-lock-fill me-1"></i><strong>Managed tables (framework-level — select only, no new entries via this form):</strong><br>
+        SourceRef &bull; SystemAuth &bull; FileFormat &bull; LinkedServiceRef &bull; <strong>DatasetRef</strong>
       </div>
     </div>
 
-    <!-- ══════════════════════ STEP 2: INPUT DATASET -->
+    <!-- ══ STEP 2: INPUT DATASET ═══════════════════════════════════ -->
     <div class="step-panel" id="panel-2">
-      <div class="section-label">Input Dataset <span class="badge bg-primary" style="font-size:.65rem">Source</span>
-        <span class="managed-badge ms-1">User-created table</span>
-      </div>
-
-      <div class="known-panel">
-        <div class="fw-semibold mb-1"><i class="bi bi-shield-check text-warning me-1"></i>Duplicate Prevention — Existing Dataset Names</div>
-        <div class="text-muted mb-2" style="font-size:.75rem">Paste dataset names already in <code>EDP_Metadata.DatasetRef</code> (comma-separated).</div>
-        <textarea class="form-control form-control-sm" id="knownDatasets" rows="2" placeholder="e.g. DS_ADLS_SAMI_PARQUET, DS_ASQL_SQLA_TABLE" oninput="loadKnown('datasets','knownDatasets')"></textarea>
-      </div>
-
-      <div class="field-group mt-3">
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" id="newInputDs" checked onchange="toggleDataset('input')">
-          <label class="form-check-label fw-semibold" for="newInputDs">Create a new Input Dataset</label>
-        </div>
-        <div id="inputDs-existing" style="display:none">
-          <label class="form-label">Existing Dataset Name <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="inputDs-existingName"
-                 placeholder="e.g. DS_ADLS_SAMI_PARQUET"
-                 oninput="liveValidateExisting('inputDs-existingName','datasets')"
-                 onblur="liveValidateExisting('inputDs-existingName','datasets')">
-          <div class="vmsg" id="vmsg-inputDs-existingName"></div>
-        </div>
-        <div id="inputDs-new">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Linked Service <span class="text-danger">*</span></label>
-              <select class="form-select" id="inputLs" onchange="onLsChange('input')" onblur="liveValidateSelect('inputLs')">
-                <option value="">— Select Linked Service —</option>
-              </select>
-              <div class="vmsg" id="vmsg-inputLs"></div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">File Format</label>
-              <select class="form-select" id="inputFf" onchange="onFfChange('input')">
-                <option value="">— N/A (SQL / API / NoSQL) —</option>
-              </select>
-              <div class="suggestion" id="inputFfHint"></div>
-            </div>
-          </div>
-          <div id="inputSqlFields" class="mt-3" style="display:none">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Schema Name</label>
-                <input type="text" class="form-control" id="inputSchema" placeholder="e.g. dbo"
-                       oninput="liveValidateIdent('inputSchema')" onblur="liveValidateIdent('inputSchema')">
-                <div class="vmsg" id="vmsg-inputSchema"></div>
-              </div>
-              <div class="col-md-8">
-                <label class="form-label">Table Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="inputTable" placeholder="e.g. Orders"
-                       oninput="liveValidateIdent('inputTable',true)" onblur="liveValidateIdent('inputTable',true)">
-                <div class="vmsg" id="vmsg-inputTable"></div>
-              </div>
-            </div>
-          </div>
-          <div id="inputFileFields" class="mt-3" style="display:none">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Container <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="inputContainer" placeholder="e.g. raw"
-                       oninput="liveValidateContainer('inputContainer',true)" onblur="liveValidateContainer('inputContainer',true)">
-                <div class="vmsg" id="vmsg-inputContainer"></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Folder Path</label>
-                <input type="text" class="form-control" id="inputFolder" placeholder="e.g. /sales/orders"
-                       oninput="liveValidatePath('inputFolder')" onblur="liveValidatePath('inputFolder')">
-                <div class="vmsg" id="vmsg-inputFolder"></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">File Name</label>
-                <input type="text" class="form-control" id="inputFile" placeholder="e.g. orders_*.parquet">
-              </div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <label class="form-label">Dataset Name <span class="text-danger">*</span>
-              <small class="text-muted fw-normal ms-1">Convention: <code>DS_{Source_Ref}_{Auth_Ref}_{Format}</code></small>
-            </label>
-            <input type="text" class="form-control" id="inputDsName" placeholder="e.g. DS_ADLS_SAMI_PARQUET"
-                   oninput="liveValidateDsName('inputDsName','input')" onblur="liveValidateDsName('inputDsName','input')">
-            <div class="vmsg" id="vmsg-inputDsName"></div>
-            <div class="suggestion" id="inputDsHint"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════ STEP 3: OUTPUT DATASET -->
-    <div class="step-panel" id="panel-3">
-      <div class="section-label">Output Dataset <span class="badge bg-success" style="font-size:.65rem">Target</span>
-        <span class="managed-badge ms-1">User-created table</span>
+      <div class="slabel">Input Dataset <span class="badge bg-primary" style="font-size:.63rem">Source</span>
+        <span class="mbadge ms-1">Managed — select only</span>
       </div>
       <div class="alert alert-info py-2 px-3 mb-3" style="font-size:.79rem">
-        <i class="bi bi-info-circle"></i> Datasets added in Step 2 are also tracked here — the same name cannot be reused for the output if it was just created as input.
+        <i class="bi bi-info-circle me-1"></i>
+        DatasetRef is now a framework-managed table seeded with all valid Source × Format combinations.
+        Select the <strong>Source</strong> and <strong>Format</strong> — the dataset name is resolved automatically.
+        Runtime parameters (container, path, table, server) go in <strong>MetadataSettingsInput</strong> in Step 5.
       </div>
       <div class="field-group">
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" id="newOutputDs" checked onchange="toggleDataset('output')">
-          <label class="form-check-label fw-semibold" for="newOutputDs">Create a new Output Dataset</label>
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Source <span class="text-danger">*</span></label>
+            <select class="form-select" id="inputSrc" onchange="onSrcChange('input')" onblur="liveValidateSelect('inputSrc')">
+              <option value="">— Select Source —</option>
+            </select>
+            <div class="vmsg" id="vmsg-inputSrc"></div>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">File Format <span class="text-danger">*</span></label>
+            <select class="form-select" id="inputFmt" onchange="onFmtChange('input')" onblur="liveValidateSelect('inputFmt')" disabled>
+              <option value="">— Select Source first —</option>
+            </select>
+            <div class="vmsg" id="vmsg-inputFmt"></div>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <span class="badge bg-secondary w-100 py-2 text-center" id="inputFmtBadge" style="font-size:.7rem">—</span>
+          </div>
         </div>
-        <div id="outputDs-existing" style="display:none">
-          <label class="form-label">Existing Dataset Name <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="outputDs-existingName"
-                 placeholder="e.g. DS_ASQL_SAMI_TABLE"
-                 oninput="liveValidateExisting('outputDs-existingName','datasets')"
-                 onblur="liveValidateExisting('outputDs-existingName','datasets')">
-          <div class="vmsg" id="vmsg-outputDs-existingName"></div>
-        </div>
-        <div id="outputDs-new">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Linked Service <span class="text-danger">*</span></label>
-              <select class="form-select" id="outputLs" onchange="onLsChange('output')" onblur="liveValidateSelect('outputLs')">
-                <option value="">— Select Linked Service —</option>
-              </select>
-              <div class="vmsg" id="vmsg-outputLs"></div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">File Format</label>
-              <select class="form-select" id="outputFf" onchange="onFfChange('output')">
-                <option value="">— N/A (SQL / API / NoSQL) —</option>
-              </select>
-            </div>
-          </div>
-          <div id="outputSqlFields" class="mt-3" style="display:none">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Schema Name</label>
-                <input type="text" class="form-control" id="outputSchema" placeholder="e.g. dbo"
-                       oninput="liveValidateIdent('outputSchema')" onblur="liveValidateIdent('outputSchema')">
-                <div class="vmsg" id="vmsg-outputSchema"></div>
-              </div>
-              <div class="col-md-8">
-                <label class="form-label">Table Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="outputTable" placeholder="e.g. Orders_Curated"
-                       oninput="liveValidateIdent('outputTable',true)" onblur="liveValidateIdent('outputTable',true)">
-                <div class="vmsg" id="vmsg-outputTable"></div>
-              </div>
-            </div>
-          </div>
-          <div id="outputFileFields" class="mt-3" style="display:none">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Container <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="outputContainer" placeholder="e.g. curated"
-                       oninput="liveValidateContainer('outputContainer',true)" onblur="liveValidateContainer('outputContainer',true)">
-                <div class="vmsg" id="vmsg-outputContainer"></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Folder Path</label>
-                <input type="text" class="form-control" id="outputFolder" placeholder="e.g. /sales/orders"
-                       oninput="liveValidatePath('outputFolder')" onblur="liveValidatePath('outputFolder')">
-                <div class="vmsg" id="vmsg-outputFolder"></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">File Name</label>
-                <input type="text" class="form-control" id="outputFile" placeholder="Leave blank for dynamic">
-              </div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <label class="form-label">Dataset Name <span class="text-danger">*</span>
-              <small class="text-muted fw-normal ms-1">Convention: <code>DS_{Source_Ref}_{Auth_Ref}_{Format}</code></small>
-            </label>
-            <input type="text" class="form-control" id="outputDsName" placeholder="e.g. DS_ASQL_SQLA_TABLE"
-                   oninput="liveValidateDsName('outputDsName','output')" onblur="liveValidateDsName('outputDsName','output')">
-            <div class="vmsg" id="vmsg-outputDsName"></div>
-            <div class="suggestion" id="outputDsHint"></div>
-          </div>
+        <div class="ds-card mt-3" id="inputDsCard" style="display:none">
+          <div class="text-muted" style="font-size:.75rem">Resolved dataset</div>
+          <div class="fw-bold mt-1" id="inputDsName" style="font-size:1rem; color:#0078d4"></div>
+          <div class="text-muted mt-1" style="font-size:.75rem" id="inputDsDetail"></div>
         </div>
       </div>
     </div>
 
-    <!-- ══════════════════════ STEP 4: WATERMARK -->
-    <div class="step-panel" id="panel-4">
-      <div class="section-label">Watermark Configuration
-        <span class="managed-badge ms-1">User-created table</span>
+    <!-- ══ STEP 3: OUTPUT DATASET ══════════════════════════════════ -->
+    <div class="step-panel" id="panel-3">
+      <div class="slabel">Output Dataset <span class="badge bg-success" style="font-size:.63rem">Target</span>
+        <span class="mbadge ms-1">Managed — select only</span>
       </div>
-      <div class="alert alert-info py-2 px-3" id="wmSkipMsg" style="display:none; font-size:.8rem">
-        <i class="bi bi-skip-forward-fill me-1"></i> <strong>Full Refresh</strong> selected — watermark is not applicable. This step is skipped.
+      <div class="field-group">
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Source <span class="text-danger">*</span></label>
+            <select class="form-select" id="outputSrc" onchange="onSrcChange('output')" onblur="liveValidateSelect('outputSrc')">
+              <option value="">— Select Source —</option>
+            </select>
+            <div class="vmsg" id="vmsg-outputSrc"></div>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">File Format <span class="text-danger">*</span></label>
+            <select class="form-select" id="outputFmt" onchange="onFmtChange('output')" onblur="liveValidateSelect('outputFmt')" disabled>
+              <option value="">— Select Source first —</option>
+            </select>
+            <div class="vmsg" id="vmsg-outputFmt"></div>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <span class="badge bg-secondary w-100 py-2 text-center" id="outputFmtBadge" style="font-size:.7rem">—</span>
+          </div>
+        </div>
+        <div class="ds-card mt-3" id="outputDsCard" style="display:none">
+          <div class="text-muted" style="font-size:.75rem">Resolved dataset</div>
+          <div class="fw-bold mt-1" id="outputDsName" style="font-size:1rem; color:#107c41"></div>
+          <div class="text-muted mt-1" style="font-size:.75rem" id="outputDsDetail"></div>
+        </div>
+        <div class="vmsg err mt-2" id="vmsg-crossDs"></div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 4: WATERMARK ═══════════════════════════════════════ -->
+    <div class="step-panel" id="panel-4">
+      <div class="slabel">Watermark <span class="ubadge ms-1">User-created</span></div>
+      <div class="alert alert-info py-2 px-3" id="wmSkipMsg" style="display:none; font-size:.79rem">
+        <i class="bi bi-skip-forward-fill me-1"></i><strong>Full Refresh</strong> — no watermark needed. Step skipped.
       </div>
       <div id="wmFields">
         <div class="field-group">
@@ -295,45 +183,40 @@
                 <input type="datetime-local" class="form-control" id="wmValue" value="1999-01-01T00:00"
                        oninput="liveValidateWmValue()" onblur="liveValidateWmValue()">
                 <div class="vmsg" id="vmsg-wmValue"></div>
-                <div class="suggestion">Starting point for the first incremental run. Must be in the past.</div>
+                <div class="sugg">Starting point for first incremental run. Must be in the past.</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label">Watermark Column <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="wmColumn" placeholder="e.g. ModifiedDate, UpdatedAt, LastModified"
+                <input type="text" class="form-control" id="wmColumn" placeholder="e.g. ModifiedDate, UpdatedAt"
                        oninput="liveValidateWmColumn()" onblur="liveValidateWmColumn()">
                 <div class="vmsg" id="vmsg-wmColumn"></div>
-                <div class="suggestion">Must be a valid SQL column name in the source table</div>
+                <div class="sugg">Valid SQL column name in the source table</div>
               </div>
             </div>
           </div>
           <div id="wmExisting" style="display:none">
             <label class="form-label">Existing Watermark_ID</label>
-            <input type="number" class="form-control w-50" id="wmExistingId" placeholder="e.g. 2" min="1"
+            <input type="number" class="form-control w-50" id="wmExistingId" placeholder="e.g. 2" min="2"
                    oninput="liveValidateWmExisting()" onblur="liveValidateWmExisting()">
             <div class="vmsg" id="vmsg-wmExistingId"></div>
-            <div class="suggestion"><i class="bi bi-info-circle"></i> Must be &ge; 2 (ID 1 is the global default placeholder)</div>
+            <div class="sugg"><i class="bi bi-info-circle"></i> Must be &ge; 2 (ID 1 is the global default placeholder)</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ══════════════════════ STEP 5: METADATA JOB -->
+    <!-- ══ STEP 5: METADATA JOB ════════════════════════════════════ -->
     <div class="step-panel" id="panel-5">
-      <div class="section-label">Metadata Job Configuration
-        <span class="managed-badge ms-1">User-created table</span>
-      </div>
-
+      <div class="slabel">Metadata Job Configuration <span class="ubadge ms-1">User-created</span></div>
       <div class="known-panel">
-        <div class="fw-semibold mb-1"><i class="bi bi-shield-check text-warning me-1"></i>Duplicate Prevention — Existing Job Names</div>
-        <div class="text-muted mb-2" style="font-size:.75rem">Paste Metadata_Job names already in <code>EDP_Metadata.MetadataRef</code> (comma-separated).</div>
-        <textarea class="form-control form-control-sm" id="knownJobs" rows="2" placeholder="e.g. JOB_Orders_Daily, JOB_Customers_Full" oninput="loadKnown('jobs','knownJobs')"></textarea>
+        <div class="fw-semibold mb-1"><i class="bi bi-shield-check text-warning me-1"></i>Paste existing Metadata Job names (comma-separated) to prevent duplicates</div>
+        <textarea class="form-control form-control-sm" id="knownJobs" rows="2" placeholder="JOB_Orders_Daily, JOB_Customers_Full" oninput="loadKnown('jobs','knownJobs')"></textarea>
       </div>
-
       <div class="field-group mt-3">
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Metadata Job Name <span class="text-danger">*</span>
-              <small class="text-muted fw-normal ms-1">Convention: <code>JOB_{Source}_{Description}</code></small>
+              <small class="text-muted fw-normal ms-1">Convention: <code>JOB_{Source}_{Desc}</code></small>
             </label>
             <input type="text" class="form-control" id="jobName" placeholder="e.g. JOB_Orders_ADLS_to_ASQL"
                    oninput="liveValidateJobName()" onblur="liveValidateJobName()">
@@ -354,17 +237,43 @@
             <input type="text" class="form-control" id="adfName" value="adfclaude01" maxlength="63"
                    oninput="liveValidateAdfName()" onblur="liveValidateAdfName()">
             <div class="vmsg" id="vmsg-adfName"></div>
-            <div class="suggestion">3–63 chars, letters/numbers/hyphens only, must start with a letter</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Trigger Name <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="triggerName" placeholder="e.g. TR_Orders_Daily"
                    oninput="liveValidateTrigger()" onblur="liveValidateTrigger()">
             <div class="vmsg" id="vmsg-triggerName"></div>
-            <div class="suggestion">Suggestion: <code>TR_{JobRef}_{Frequency}</code> e.g. TR_Orders_Daily</div>
+            <div class="sugg">Suggestion: <code>TR_{JobRef}_{Frequency}</code></div>
           </div>
         </div>
-        <div class="row g-3 mt-1">
+
+        <!-- Linked Services (now at job level) -->
+        <hr class="my-3">
+        <div class="slabel">Linked Services <span class="mbadge ms-1">Managed — select only</span></div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Input Linked Service <span class="text-danger">*</span></label>
+            <select class="form-select" id="inputLs" onblur="liveValidateSelect('inputLs')">
+              <option value="">— Select (filtered by input source) —</option>
+            </select>
+            <div class="vmsg" id="vmsg-inputLs"></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Output Linked Service <span class="text-danger">*</span></label>
+            <select class="form-select" id="outputLs" onblur="liveValidateSelect('outputLs')">
+              <option value="">— Select (filtered by output source) —</option>
+            </select>
+            <div class="vmsg" id="vmsg-outputLs"></div>
+          </div>
+        </div>
+        <div class="alert alert-info py-2 px-3 mt-2" style="font-size:.78rem">
+          <i class="bi bi-info-circle me-1"></i>
+          Linked service dropdowns are filtered to match the source type of your selected datasets.
+          Connection details (server name, container, folder path, table etc.) go in the settings JSON below.
+        </div>
+
+        <hr class="my-3">
+        <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label d-block">Activity Type</label>
             <div class="btn-group w-100">
@@ -395,7 +304,9 @@
         </div>
         <div class="row g-3 mt-1">
           <div class="col-12">
-            <label class="form-label">Metadata Settings — Input (JSON)</label>
+            <label class="form-label">Metadata Settings — Input (JSON)
+              <small class="text-muted fw-normal ms-1">container, path, table, server, schema…</small>
+            </label>
             <textarea class="form-control font-monospace" id="settingsInput" rows="3"
                       oninput="liveValidateJson('settingsInput')" onblur="liveValidateJson('settingsInput')">{}</textarea>
             <div class="vmsg" id="vmsg-settingsInput"></div>
@@ -410,15 +321,15 @@
       </div>
     </div>
 
-    <!-- ══════════════════════ STEP 6: GENERATED SQL -->
+    <!-- ══ STEP 6: GENERATE SQL ════════════════════════════════════ -->
     <div class="step-panel" id="panel-6">
-      <div class="section-label">Generated SQL INSERT Scripts</div>
+      <div class="slabel">Generated SQL INSERT Scripts</div>
       <div id="sqlSummary" class="mb-3"></div>
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <small class="text-muted">Run against <strong>asqlclaude01</strong> &rarr; <strong>EDP_Metadata</strong> schema. All blocks are idempotent.</small>
+        <small class="text-muted">Run against <strong>asqlclaude01</strong> → <strong>EDP_Metadata</strong>. All blocks are idempotent.</small>
         <button class="btn btn-sm btn-outline-secondary" onclick="copyAll()"><i class="bi bi-clipboard me-1"></i>Copy All</button>
       </div>
-      <div class="sql-output" id="sqlOutput">-- Click "Generate SQL" to produce scripts.</div>
+      <div class="sql-out" id="sqlOutput">-- Click "Generate SQL" to produce scripts.</div>
     </div>
 
     <div class="nav-btns">
@@ -432,85 +343,115 @@
 
 <div id="toastBox">
   <div id="toast" class="toast align-items-center text-white bg-success border-0" role="alert">
-    <div class="d-flex"><div class="toast-body" id="toastMsg">Copied!</div>
+    <div class="d-flex"><div class="toast-body" id="toastMsg"></div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ══════════════════════════════════════════════════════ LOOKUP DATA
-const FILE_FORMATS = [
-  {id:1,format:'CSV'},{id:2,format:'JSON'},{id:3,format:'Parquet'},
-  {id:4,format:'Avro'},{id:5,format:'ORC'},{id:6,format:'Excel'},
-  {id:7,format:'XML'},{id:8,format:'Binary'},{id:9,format:'Delta'},
-  {id:10,format:'DelimitedText'}
+// ════════════════════════════════════════════ LOOKUP DATA (seeded from DB)
+const DATASET_REF = [
+  {name:'DS_ADLS_CSV',           src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'CSV'},
+  {name:'DS_ADLS_JSON',          src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'JSON'},
+  {name:'DS_ADLS_PARQUET',       src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Parquet'},
+  {name:'DS_ADLS_AVRO',          src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Avro'},
+  {name:'DS_ADLS_ORC',           src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'ORC'},
+  {name:'DS_ADLS_EXCEL',         src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Excel'},
+  {name:'DS_ADLS_XML',           src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'XML'},
+  {name:'DS_ADLS_BINARY',        src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Binary'},
+  {name:'DS_ADLS_DELTA',         src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Delta'},
+  {name:'DS_ADLS_DELIMITEDTEXT', src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'DelimitedText'},
+  {name:'DS_ADLS_ZIP',           src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Zip'},
+  {name:'DS_ADLS_TAR',           src:'ADLS Gen2',        srcRef:'ADLS',   fmt:'Tar'},
+  {name:'DS_ASQL_TABLE',         src:'Azure SQL',        srcRef:'ASQL',   fmt:'TABLE'},
+  {name:'DS_ORA_TABLE',          src:'On-Prem Oracle',   srcRef:'ORA',    fmt:'TABLE'},
+  {name:'DS_MYSQL_TABLE',        src:'On-Prem MySQL',    srcRef:'MYSQL',  fmt:'TABLE'},
+  {name:'DS_SFTP_CSV',           src:'SFTP',             srcRef:'SFTP',   fmt:'CSV'},
+  {name:'DS_SFTP_JSON',          src:'SFTP',             srcRef:'SFTP',   fmt:'JSON'},
+  {name:'DS_SFTP_XML',           src:'SFTP',             srcRef:'SFTP',   fmt:'XML'},
+  {name:'DS_SFTP_BINARY',        src:'SFTP',             srcRef:'SFTP',   fmt:'Binary'},
+  {name:'DS_SFTP_DELIMITEDTEXT', src:'SFTP',             srcRef:'SFTP',   fmt:'DelimitedText'},
+  {name:'DS_SFTP_EXCEL',         src:'SFTP',             srcRef:'SFTP',   fmt:'Excel'},
+  {name:'DS_SFTP_ZIP',           src:'SFTP',             srcRef:'SFTP',   fmt:'Zip'},
+  {name:'DS_SFTP_TAR',           src:'SFTP',             srcRef:'SFTP',   fmt:'Tar'},
+  {name:'DS_FTP_CSV',            src:'FTP',              srcRef:'FTP',    fmt:'CSV'},
+  {name:'DS_FTP_JSON',           src:'FTP',              srcRef:'FTP',    fmt:'JSON'},
+  {name:'DS_FTP_XML',            src:'FTP',              srcRef:'FTP',    fmt:'XML'},
+  {name:'DS_FTP_BINARY',         src:'FTP',              srcRef:'FTP',    fmt:'Binary'},
+  {name:'DS_FTP_DELIMITEDTEXT',  src:'FTP',              srcRef:'FTP',    fmt:'DelimitedText'},
+  {name:'DS_FTP_EXCEL',          src:'FTP',              srcRef:'FTP',    fmt:'Excel'},
+  {name:'DS_FTP_ZIP',            src:'FTP',              srcRef:'FTP',    fmt:'Zip'},
+  {name:'DS_FTP_TAR',            src:'FTP',              srcRef:'FTP',    fmt:'Tar'},
+  {name:'DS_ADB_DELTA',          src:'Azure Databricks', srcRef:'ADB',    fmt:'Delta'},
+  {name:'DS_ADB_PARQUET',        src:'Azure Databricks', srcRef:'ADB',    fmt:'Parquet'},
+  {name:'DS_ADB_CSV',            src:'Azure Databricks', srcRef:'ADB',    fmt:'CSV'},
+  {name:'DS_ADB_JSON',           src:'Azure Databricks', srcRef:'ADB',    fmt:'JSON'},
+  {name:'DS_COSMOS_JSON',        src:'Cosmos DB',        srcRef:'COSMOS', fmt:'JSON'},
+  {name:'DS_REST_JSON',          src:'REST API',         srcRef:'REST',   fmt:'JSON'},
+  {name:'DS_REST_XML',           src:'REST API',         srcRef:'REST',   fmt:'XML'}
 ];
+
 const LINKED_SERVICES = [
-  {id:1, name:'LS_ADLS_SP',       src:'ADLS Gen2',       srcRef:'ADLS',   auth:'Service Principal',                authRef:'SP'},
-  {id:2, name:'LS_ADLS_SAMI',     src:'ADLS Gen2',       srcRef:'ADLS',   auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:3, name:'LS_ADLS_UAMI',     src:'ADLS Gen2',       srcRef:'ADLS',   auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:4, name:'LS_ADLS_AK',       src:'ADLS Gen2',       srcRef:'ADLS',   auth:'Account Key',                      authRef:'AK'},
-  {id:5, name:'LS_ADLS_SAS',      src:'ADLS Gen2',       srcRef:'ADLS',   auth:'Shared Access Signature',          authRef:'SAS'},
-  {id:6, name:'LS_ADLS_CREDREF',  src:'ADLS Gen2',       srcRef:'ADLS',   auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:7, name:'LS_ASQL_SP',       src:'Azure SQL',       srcRef:'ASQL',   auth:'Service Principal',                authRef:'SP'},
-  {id:8, name:'LS_ASQL_SAMI',     src:'Azure SQL',       srcRef:'ASQL',   auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:9, name:'LS_ASQL_UAMI',     src:'Azure SQL',       srcRef:'ASQL',   auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:10,name:'LS_ASQL_SQLA',     src:'Azure SQL',       srcRef:'ASQL',   auth:'SQL Authentication',               authRef:'SQLA'},
-  {id:11,name:'LS_ASQL_CREDREF',  src:'Azure SQL',       srcRef:'ASQL',   auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:12,name:'LS_AKV_SP',        src:'Key Vault',       srcRef:'AKV',    auth:'Service Principal',                authRef:'SP'},
-  {id:13,name:'LS_AKV_SAMI',      src:'Key Vault',       srcRef:'AKV',    auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:14,name:'LS_AKV_UAMI',      src:'Key Vault',       srcRef:'AKV',    auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:15,name:'LS_AKV_CREDREF',   src:'Key Vault',       srcRef:'AKV',    auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:16,name:'LS_ORA_BASIC',     src:'On-Prem Oracle',  srcRef:'ORA',    auth:'Basic',                            authRef:'BASIC'},
-  {id:17,name:'LS_ORA_SQLA',      src:'On-Prem Oracle',  srcRef:'ORA',    auth:'SQL Authentication',               authRef:'SQLA'},
-  {id:18,name:'LS_ORA_WIN',       src:'On-Prem Oracle',  srcRef:'ORA',    auth:'Windows Authentication',           authRef:'WIN'},
-  {id:19,name:'LS_ORA_CREDREF',   src:'On-Prem Oracle',  srcRef:'ORA',    auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:20,name:'LS_MYSQL_BASIC',   src:'On-Prem MySQL',   srcRef:'MYSQL',  auth:'Basic',                            authRef:'BASIC'},
-  {id:21,name:'LS_MYSQL_SQLA',    src:'On-Prem MySQL',   srcRef:'MYSQL',  auth:'SQL Authentication',               authRef:'SQLA'},
-  {id:22,name:'LS_MYSQL_WIN',     src:'On-Prem MySQL',   srcRef:'MYSQL',  auth:'Windows Authentication',           authRef:'WIN'},
-  {id:23,name:'LS_MYSQL_CREDREF', src:'On-Prem MySQL',   srcRef:'MYSQL',  auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:24,name:'LS_FUNC_FKEY',     src:'Function App',    srcRef:'FUNC',   auth:'Function Key',                     authRef:'FKEY'},
-  {id:25,name:'LS_FUNC_SKEY',     src:'Function App',    srcRef:'FUNC',   auth:'System Key',                       authRef:'SKEY'},
-  {id:26,name:'LS_FUNC_SAMI',     src:'Function App',    srcRef:'FUNC',   auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:27,name:'LS_FUNC_UAMI',     src:'Function App',    srcRef:'FUNC',   auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:28,name:'LS_FUNC_ANON',     src:'Function App',    srcRef:'FUNC',   auth:'Anonymous',                        authRef:'ANON'},
-  {id:29,name:'LS_SFTP_BASIC',    src:'SFTP',            srcRef:'SFTP',   auth:'Basic',                            authRef:'BASIC'},
-  {id:30,name:'LS_SFTP_SSH',      src:'SFTP',            srcRef:'SFTP',   auth:'SSH Public Key',                   authRef:'SSH'},
-  {id:31,name:'LS_SFTP_MFA',      src:'SFTP',            srcRef:'SFTP',   auth:'Multi-Factor Authentication',      authRef:'MFA'},
-  {id:32,name:'LS_SFTP_ANON',     src:'SFTP',            srcRef:'SFTP',   auth:'Anonymous',                        authRef:'ANON'},
-  {id:33,name:'LS_FTP_BASIC',     src:'FTP',             srcRef:'FTP',    auth:'Basic',                            authRef:'BASIC'},
-  {id:34,name:'LS_FTP_ANON',      src:'FTP',             srcRef:'FTP',    auth:'Anonymous',                        authRef:'ANON'},
-  {id:35,name:'LS_COSMOS_SP',     src:'Cosmos DB',       srcRef:'COSMOS', auth:'Service Principal',                authRef:'SP'},
-  {id:36,name:'LS_COSMOS_SAMI',   src:'Cosmos DB',       srcRef:'COSMOS', auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:37,name:'LS_COSMOS_UAMI',   src:'Cosmos DB',       srcRef:'COSMOS', auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:38,name:'LS_COSMOS_AK',     src:'Cosmos DB',       srcRef:'COSMOS', auth:'Account Key',                      authRef:'AK'},
-  {id:39,name:'LS_COSMOS_CREDREF',src:'Cosmos DB',       srcRef:'COSMOS', auth:'Credential Reference',             authRef:'CREDREF'},
-  {id:40,name:'LS_ADB_AT',        src:'Azure Databricks',srcRef:'ADB',    auth:'Access Token',                     authRef:'AT'},
-  {id:41,name:'LS_ADB_SAMI',      src:'Azure Databricks',srcRef:'ADB',    auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:42,name:'LS_ADB_UAMI',      src:'Azure Databricks',srcRef:'ADB',    auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:43,name:'LS_ADB_SP',        src:'Azure Databricks',srcRef:'ADB',    auth:'Service Principal',                authRef:'SP'},
-  {id:44,name:'LS_REST_ANON',     src:'REST API',        srcRef:'REST',   auth:'Anonymous',                        authRef:'ANON'},
-  {id:45,name:'LS_REST_BASIC',    src:'REST API',        srcRef:'REST',   auth:'Basic',                            authRef:'BASIC'},
-  {id:46,name:'LS_REST_SP',       src:'REST API',        srcRef:'REST',   auth:'Service Principal',                authRef:'SP'},
-  {id:47,name:'LS_REST_SAMI',     src:'REST API',        srcRef:'REST',   auth:'System-Assigned Managed Identity', authRef:'SAMI'},
-  {id:48,name:'LS_REST_UAMI',     src:'REST API',        srcRef:'REST',   auth:'User-Assigned Managed Identity',   authRef:'UAMI'},
-  {id:49,name:'LS_REST_OAUTH2',   src:'REST API',        srcRef:'REST',   auth:'OAuth2 Client Credentials',        authRef:'OAUTH2'},
-  {id:50,name:'LS_REST_APIKEY',   src:'REST API',        srcRef:'REST',   auth:'API Key',                          authRef:'APIKEY'},
-  {id:51,name:'LS_REST_CREDREF',  src:'REST API',        srcRef:'REST',   auth:'Credential Reference',             authRef:'CREDREF'}
+  {id:1, name:'LS_ADLS_SP',       srcRef:'ADLS',   auth:'Service Principal'},
+  {id:2, name:'LS_ADLS_SAMI',     srcRef:'ADLS',   auth:'System-Assigned Managed Identity'},
+  {id:3, name:'LS_ADLS_UAMI',     srcRef:'ADLS',   auth:'User-Assigned Managed Identity'},
+  {id:4, name:'LS_ADLS_AK',       srcRef:'ADLS',   auth:'Account Key'},
+  {id:5, name:'LS_ADLS_SAS',      srcRef:'ADLS',   auth:'Shared Access Signature'},
+  {id:6, name:'LS_ADLS_CREDREF',  srcRef:'ADLS',   auth:'Credential Reference'},
+  {id:7, name:'LS_ASQL_SP',       srcRef:'ASQL',   auth:'Service Principal'},
+  {id:8, name:'LS_ASQL_SAMI',     srcRef:'ASQL',   auth:'System-Assigned Managed Identity'},
+  {id:9, name:'LS_ASQL_UAMI',     srcRef:'ASQL',   auth:'User-Assigned Managed Identity'},
+  {id:10,name:'LS_ASQL_SQLA',     srcRef:'ASQL',   auth:'SQL Authentication'},
+  {id:11,name:'LS_ASQL_CREDREF',  srcRef:'ASQL',   auth:'Credential Reference'},
+  {id:12,name:'LS_AKV_SP',        srcRef:'AKV',    auth:'Service Principal'},
+  {id:13,name:'LS_AKV_SAMI',      srcRef:'AKV',    auth:'System-Assigned Managed Identity'},
+  {id:14,name:'LS_AKV_UAMI',      srcRef:'AKV',    auth:'User-Assigned Managed Identity'},
+  {id:15,name:'LS_AKV_CREDREF',   srcRef:'AKV',    auth:'Credential Reference'},
+  {id:16,name:'LS_ORA_BASIC',     srcRef:'ORA',    auth:'Basic'},
+  {id:17,name:'LS_ORA_SQLA',      srcRef:'ORA',    auth:'SQL Authentication'},
+  {id:18,name:'LS_ORA_WIN',       srcRef:'ORA',    auth:'Windows Authentication'},
+  {id:19,name:'LS_ORA_CREDREF',   srcRef:'ORA',    auth:'Credential Reference'},
+  {id:20,name:'LS_MYSQL_BASIC',   srcRef:'MYSQL',  auth:'Basic'},
+  {id:21,name:'LS_MYSQL_SQLA',    srcRef:'MYSQL',  auth:'SQL Authentication'},
+  {id:22,name:'LS_MYSQL_WIN',     srcRef:'MYSQL',  auth:'Windows Authentication'},
+  {id:23,name:'LS_MYSQL_CREDREF', srcRef:'MYSQL',  auth:'Credential Reference'},
+  {id:24,name:'LS_FUNC_FKEY',     srcRef:'FUNC',   auth:'Function Key'},
+  {id:25,name:'LS_FUNC_SKEY',     srcRef:'FUNC',   auth:'System Key'},
+  {id:26,name:'LS_FUNC_SAMI',     srcRef:'FUNC',   auth:'System-Assigned Managed Identity'},
+  {id:27,name:'LS_FUNC_UAMI',     srcRef:'FUNC',   auth:'User-Assigned Managed Identity'},
+  {id:28,name:'LS_FUNC_ANON',     srcRef:'FUNC',   auth:'Anonymous'},
+  {id:29,name:'LS_SFTP_BASIC',    srcRef:'SFTP',   auth:'Basic'},
+  {id:30,name:'LS_SFTP_SSH',      srcRef:'SFTP',   auth:'SSH Public Key'},
+  {id:31,name:'LS_SFTP_MFA',      srcRef:'SFTP',   auth:'Multi-Factor Authentication'},
+  {id:32,name:'LS_SFTP_ANON',     srcRef:'SFTP',   auth:'Anonymous'},
+  {id:33,name:'LS_FTP_BASIC',     srcRef:'FTP',    auth:'Basic'},
+  {id:34,name:'LS_FTP_ANON',      srcRef:'FTP',    auth:'Anonymous'},
+  {id:35,name:'LS_COSMOS_SP',     srcRef:'COSMOS', auth:'Service Principal'},
+  {id:36,name:'LS_COSMOS_SAMI',   srcRef:'COSMOS', auth:'System-Assigned Managed Identity'},
+  {id:37,name:'LS_COSMOS_UAMI',   srcRef:'COSMOS', auth:'User-Assigned Managed Identity'},
+  {id:38,name:'LS_COSMOS_AK',     srcRef:'COSMOS', auth:'Account Key'},
+  {id:39,name:'LS_COSMOS_CREDREF',srcRef:'COSMOS', auth:'Credential Reference'},
+  {id:40,name:'LS_ADB_AT',        srcRef:'ADB',    auth:'Access Token'},
+  {id:41,name:'LS_ADB_SAMI',      srcRef:'ADB',    auth:'System-Assigned Managed Identity'},
+  {id:42,name:'LS_ADB_UAMI',      srcRef:'ADB',    auth:'User-Assigned Managed Identity'},
+  {id:43,name:'LS_ADB_SP',        srcRef:'ADB',    auth:'Service Principal'},
+  {id:44,name:'LS_REST_ANON',     srcRef:'REST',   auth:'Anonymous'},
+  {id:45,name:'LS_REST_BASIC',    srcRef:'REST',   auth:'Basic'},
+  {id:46,name:'LS_REST_SP',       srcRef:'REST',   auth:'Service Principal'},
+  {id:47,name:'LS_REST_SAMI',     srcRef:'REST',   auth:'System-Assigned Managed Identity'},
+  {id:48,name:'LS_REST_UAMI',     srcRef:'REST',   auth:'User-Assigned Managed Identity'},
+  {id:49,name:'LS_REST_OAUTH2',   srcRef:'REST',   auth:'OAuth2 Client Credentials'},
+  {id:50,name:'LS_REST_APIKEY',   srcRef:'REST',   auth:'API Key'},
+  {id:51,name:'LS_REST_CREDREF',  srcRef:'REST',   auth:'Credential Reference'}
 ];
-const FILE_SRCS = ['ADLS','FTP','SFTP'];
-const SQL_SRCS  = ['ASQL','ORA','MYSQL'];
 
-// ══════════════════════════════════════════════════════ SESSION STATE
-const session = { domains:[], datasets:[], jobs:[] };
-const known   = { domains:[], datasets:[], jobs:[] };
-
+// ════════════════════════════════════════════ SESSION / KNOWN
+const session = { domains:[], jobs:[] };
+const known   = { domains:[], jobs:[] };
 function loadKnown(key, elId) {
-  const raw = document.getElementById(elId).value;
-  known[key] = raw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  known[key] = document.getElementById(elId).value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
 }
-
 function isDuplicate(name, key) {
   const n = name.trim().toLowerCase();
   if (session[key].includes(n)) return 'session';
@@ -518,67 +459,98 @@ function isDuplicate(name, key) {
   return false;
 }
 
-// ══════════════════════════════════════════════════════ WIZARD NAV
-let currentStep = 1;
-const TOTAL = 6;
+// ════════════════════════════════════════════ INIT
+let currentStep = 1, TOTAL = 6;
 
 function init() {
-  ['input','output'].forEach(s => {
-    const sel = document.getElementById(s+'Ls');
-    const groups = {};
-    LINKED_SERVICES.forEach(ls => { if(!groups[ls.src]) groups[ls.src]=[]; groups[ls.src].push(ls); });
-    Object.keys(groups).forEach(src => {
-      const og = document.createElement('optgroup'); og.label = src;
-      groups[src].forEach(ls => {
-        const o = document.createElement('option'); o.value = ls.id;
-        o.textContent = `${ls.name}  (${ls.auth})`; og.appendChild(o);
-      });
-      sel.appendChild(og);
+  // Populate Source dropdowns
+  const sources = [...new Set(DATASET_REF.map(d=>d.src))];
+  ['inputSrc','outputSrc'].forEach(id => {
+    const sel = document.getElementById(id);
+    sources.forEach(s => {
+      const o = document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);
     });
-    const ff = document.getElementById(s+'Ff');
-    FILE_FORMATS.forEach(f => {
-      const o = document.createElement('option'); o.value = f.id; o.textContent = f.format; ff.appendChild(o);
-    });
-  });
-  toggleDataset('input'); toggleDataset('output'); updateNav();
-}
-
-function navigate(dir) {
-  if (dir===1 && !validateStep(currentStep)) return;
-  if (dir===1 && currentStep===TOTAL) return;
-  if (dir===-1 && currentStep===1) return;
-  currentStep += dir;
-  renderStep();
-}
-function goTo(n) { if(n<=currentStep){ currentStep=n; renderStep(); } }
-
-function renderStep() {
-  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+currentStep).classList.add('active');
-  document.querySelectorAll('.step-item').forEach((it,i)=>{
-    it.classList.remove('active','done');
-    if(i+1===currentStep) it.classList.add('active');
-    if(i+1<currentStep)   it.classList.add('done');
   });
   updateNav();
-  if(currentStep===4) onLoadTypeChange();
-  if(currentStep===5) syncDomainDropdown();
-  if(currentStep===6) generateSQL();
-}
-function updateNav() {
-  document.getElementById('btnBack').style.display     = currentStep>1 ? 'block':'none';
-  document.getElementById('btnNext').style.display     = currentStep<TOTAL ? 'block':'none';
-  document.getElementById('btnGenerate').style.display = currentStep===TOTAL ? 'block':'none';
 }
 
-// ══════════════════════════════════════════════════════ TOGGLES
+function onSrcChange(side) {
+  const src = document.getElementById(side+'Src').value;
+  const fmtSel = document.getElementById(side+'Fmt');
+  fmtSel.innerHTML = '<option value="">— Select Format —</option>';
+  document.getElementById(side+'DsCard').style.display = 'none';
+  document.getElementById(side+'FmtBadge').textContent = '—';
+  document.getElementById(side+'FmtBadge').className = 'badge bg-secondary w-100 py-2 text-center';
+  liveValidateSelect(side+'Src');
+  if (!src) { fmtSel.disabled=true; return; }
+  const formats = [...new Set(DATASET_REF.filter(d=>d.src===src).map(d=>d.fmt))].sort();
+  formats.forEach(f => {
+    const o = document.createElement('option'); o.value=f; o.textContent = f==='TABLE'?'TABLE (no file format)':f;
+    fmtSel.appendChild(o);
+  });
+  fmtSel.disabled = false;
+  // If only one format option, auto-select it
+  if (formats.length === 1) { fmtSel.value = formats[0]; onFmtChange(side); }
+  // Rebuild LS dropdown if on step 5
+  if (currentStep === 5) populateLsDropdown(side);
+}
+
+function onFmtChange(side) {
+  const src = document.getElementById(side+'Src').value;
+  const fmt = document.getElementById(side+'Fmt').value;
+  const card = document.getElementById(side+'DsCard');
+  const badge = document.getElementById(side+'FmtBadge');
+  liveValidateSelect(side+'Fmt');
+  if (!fmt) { card.style.display='none'; badge.textContent='—'; return; }
+  const ds = DATASET_REF.find(d=>d.src===src && d.fmt===fmt);
+  if (!ds) { card.style.display='none'; return; }
+  document.getElementById(side+'DsName').textContent = ds.name;
+  document.getElementById(side+'DsDetail').textContent = `${src} × ${fmt==='TABLE'?'No file format (table-based)':fmt}`;
+  card.style.display = 'block';
+  card.className = 'ds-card selected mt-3';
+  badge.textContent = fmt; badge.className = 'badge bg-primary w-100 py-2 text-center';
+  // Cross-dataset check on output step
+  if (side==='output') crossDsCheck();
+  // Rebuild LS dropdown if on step 5
+  if (currentStep === 5) populateLsDropdown(side);
+}
+
+function crossDsCheck() {
+  const inSrc = document.getElementById('inputSrc').value;
+  const inFmt = document.getElementById('inputFmt').value;
+  const outSrc = document.getElementById('outputSrc').value;
+  const outFmt = document.getElementById('outputFmt').value;
+  const msg = document.getElementById('vmsg-crossDs');
+  if (inSrc && outSrc && inSrc===outSrc && inFmt && outFmt && inFmt===outFmt) {
+    msg.textContent = 'Input and Output datasets are identical — is this intentional?';
+    msg.className = 'vmsg warn mt-2';
+  } else { msg.textContent=''; }
+}
+
+function getSelectedDs(side) {
+  const src = document.getElementById(side+'Src').value;
+  const fmt = document.getElementById(side+'Fmt').value;
+  return DATASET_REF.find(d=>d.src===src && d.fmt===fmt) || null;
+}
+
+function populateLsDropdown(side) {
+  const ds = getSelectedDs(side);
+  const sel = document.getElementById(side+'Ls');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Select Linked Service —</option>';
+  if (!ds) return;
+  const compatible = LINKED_SERVICES.filter(ls=>ls.srcRef===ds.srcRef);
+  compatible.forEach(ls => {
+    const o = document.createElement('option'); o.value=ls.id;
+    o.textContent = `${ls.name}  (${ls.auth})`; sel.appendChild(o);
+  });
+  // Restore previous selection if still valid
+  if (compatible.find(l=>l.id===+prev)) sel.value=prev;
+}
+
+// ════════════════════════════════════════════ TOGGLES
 function toggleDomain() {
   document.getElementById('domainFields').style.display = document.getElementById('newDomain').checked ? 'block':'none';
-}
-function toggleDataset(side) {
-  const isNew = document.getElementById('new'+cap(side)+'Ds').checked;
-  document.getElementById(side+'Ds-existing').style.display = isNew ? 'none':'block';
-  document.getElementById(side+'Ds-new').style.display      = isNew ? 'block':'none';
 }
 function toggleWatermark() {
   const isNew = document.getElementById('newWatermark').checked;
@@ -590,334 +562,186 @@ function onLoadTypeChange() {
   document.getElementById('wmSkipMsg').style.display = isIncr ? 'none':'block';
   document.getElementById('wmFields').style.display  = isIncr ? 'block':'none';
 }
-function onLsChange(side) {
-  const lsId = +document.getElementById(side+'Ls').value;
-  const ls = LINKED_SERVICES.find(l=>l.id===lsId);
-  document.getElementById(side+'SqlFields').style.display  = (ls && SQL_SRCS.includes(ls.srcRef))  ? 'block':'none';
-  document.getElementById(side+'FileFields').style.display = (ls && FILE_SRCS.includes(ls.srcRef)) ? 'block':'none';
-  if(ls && FILE_SRCS.includes(ls.srcRef)) {
-    document.getElementById(side+'FfHint') && (document.getElementById(side+'FfHint').innerHTML =
-      '<i class="bi bi-info-circle"></i> File format is required for file-based sources');
-  } else {
-    const h = document.getElementById(side+'FfHint'); if(h) h.innerHTML='';
-  }
-  liveValidateSelect(side+'Ls');
-  suggestDsName(side);
+function onDomainSelect() {
+  const v = document.getElementById('jobDomain').value;
+  const msg = document.getElementById('vmsg-jobDomain');
+  if (v==='__new__' && !document.getElementById('newDomain').checked)
+    setMsg('jobDomain','err','No domain was created in Step 1. Go back or select NULL.');
+  else msg.textContent='';
 }
-function onFfChange(side) { suggestDsName(side); }
-function suggestDsName(side) {
-  const lsId = +document.getElementById(side+'Ls').value;
-  const ffId = +document.getElementById(side+'Ff').value;
-  const ls = LINKED_SERVICES.find(l=>l.id===lsId); if(!ls) return;
-  const ff = FILE_FORMATS.find(f=>f.id===ffId);
-  const suffix = ff ? ff.format.toUpperCase() : 'TABLE';
-  const suggested = `DS_${ls.srcRef}_${ls.authRef}_${suffix}`;
-  document.getElementById(side+'DsName').value = suggested;
-  document.getElementById(side+'DsHint').innerHTML = `<i class="bi bi-magic"></i> Auto-suggested: <strong>${suggested}</strong>`;
-  liveValidateDsName(side+'DsName', side);
+
+// ════════════════════════════════════════════ NAVIGATION
+function navigate(dir) {
+  if (dir===1 && !validateStep(currentStep)) return;
+  currentStep = Math.min(Math.max(currentStep+dir,1),TOTAL);
+  renderStep();
+}
+function goTo(n) { if(n<=currentStep){currentStep=n;renderStep();} }
+
+function renderStep() {
+  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+currentStep).classList.add('active');
+  document.querySelectorAll('.step-item').forEach((it,i)=>{
+    it.classList.remove('active','done');
+    if(i+1===currentStep) it.classList.add('active');
+    if(i+1<currentStep)   it.classList.add('done');
+  });
+  updateNav();
+  if(currentStep===4) onLoadTypeChange();
+  if(currentStep===5) { syncDomainDropdown(); populateLsDropdown('input'); populateLsDropdown('output'); }
+  if(currentStep===6) generateSQL();
+}
+function updateNav() {
+  document.getElementById('btnBack').style.display     = currentStep>1 ? 'block':'none';
+  document.getElementById('btnNext').style.display     = currentStep<TOTAL ? 'block':'none';
+  document.getElementById('btnGenerate').style.display = currentStep===TOTAL ? 'block':'none';
 }
 function syncDomainDropdown() {
   const domName = document.getElementById('domainName').value.trim();
   const isNew   = document.getElementById('newDomain').checked;
   const opt = document.querySelector('#jobDomain option[value="__new__"]');
-  if(isNew && domName) {
-    opt.textContent = `Use "${domName}" (created in Step 1)`;
-    opt.disabled = false;
-    document.getElementById('jobDomain').value = '__new__';
-  } else {
-    opt.textContent = '— No domain from Step 1 —';
-    opt.disabled = true;
-    if(document.getElementById('jobDomain').value==='__new__') document.getElementById('jobDomain').value='';
-  }
-}
-function onDomainSelect() {
-  const v = document.getElementById('jobDomain').value;
-  const msg = document.getElementById('vmsg-jobDomain');
-  if(v==='__new__' && !document.getElementById('newDomain').checked) {
-    setMsg('jobDomain','err','No domain was created in Step 1. Go back and toggle it on, or select NULL.');
-  } else { msg.textContent=''; }
+  if(isNew && domName) { opt.textContent=`Use "${domName}" (Step 1)`; opt.disabled=false; document.getElementById('jobDomain').value='__new__'; }
+  else { opt.textContent='— No domain from Step 1 —'; opt.disabled=true; if(document.getElementById('jobDomain').value==='__new__') document.getElementById('jobDomain').value=''; }
 }
 
-// ══════════════════════════════════════════════════════ LIVE VALIDATORS
-function setMsg(id, type, msg) {
-  const el = document.getElementById('vmsg-'+id);
-  if(!el) return;
-  el.textContent = msg; el.className = 'vmsg '+(type||'');
-  const inp = document.getElementById(id);
-  if(inp) { inp.classList.remove('is-valid','is-invalid'); if(msg) inp.classList.add(type==='err'?'is-invalid':'is-valid'); else if(type==='ok') inp.classList.add('is-valid'); }
-}
-
-function liveValidate(id) {
-  const v = document.getElementById(id).value.trim();
-  if(!v) return setMsg(id,'err','Required');
-  if(v.length<2)  return setMsg(id,'err','Min 2 characters');
-  if(v.length>100)return setMsg(id,'err','Max 100 characters');
-  if(!/^[A-Za-z]/.test(v)) return setMsg(id,'err','Must start with a letter');
-  if(!/^[A-Za-z][A-Za-z0-9 \-_]*$/.test(v)) return setMsg(id,'err','Only letters, numbers, spaces, hyphens and underscores allowed');
-  const dup = isDuplicate(v,'domains');
-  if(dup==='session') return setMsg(id,'err',`"${v}" was already added in this session`);
-  if(dup==='db')      return setMsg(id,'err',`"${v}" already exists in the database (from known list)`);
-  setMsg(id,'ok','✓ Valid');
+// ════════════════════════════════════════════ LIVE VALIDATORS
+function setMsg(id,type,msg) {
+  const el=document.getElementById('vmsg-'+id); if(!el)return;
+  el.textContent=msg; el.className='vmsg '+(type||'');
+  const inp=document.getElementById(id);
+  if(inp){inp.classList.remove('is-valid','is-invalid'); if(msg&&type==='err')inp.classList.add('is-invalid'); else if(type==='ok')inp.classList.add('is-valid');}
 }
 
 function liveValidateSelect(id) {
-  const v = document.getElementById(id).value;
-  if(!v) return setMsg(id,'err','Please select an option');
-  setMsg(id,'ok','✓');
+  const v=document.getElementById(id)?.value;
+  if(!v) return setMsg(id,'err','Required'); setMsg(id,'ok','✓');
 }
 
-function liveValidateExisting(id, key) {
-  const v = document.getElementById(id).value.trim();
-  if(!v) return setMsg(id,'err','Required');
-  if(!/^DS_/i.test(v)) return setMsg(id,'warn','Dataset names should start with DS_');
-  const inKnown = known[key].includes(v.toLowerCase()) || session[key].includes(v.toLowerCase());
-  if(!inKnown) return setMsg(id,'warn','This name is not in your known list — verify it exists in the DB');
-  setMsg(id,'ok','✓ Found in known list');
-}
-
-function liveValidateDsName(id, side) {
-  const v = document.getElementById(id).value.trim();
-  if(!v) return setMsg(id,'err','Required');
-  if(!/^DS_[A-Z0-9]+_[A-Z0-9]+_.+$/i.test(v))
-    return setMsg(id,'warn','Should follow DS_{Source_Ref}_{Auth_Ref}_{Format} convention');
-  const dup = isDuplicate(v,'datasets');
-  if(dup==='session') {
-    // allow if it's the same side re-suggesting
-    const other = side==='input' ? 'output':'input';
-    const otherNew = document.getElementById('new'+cap(other)+'Ds').checked;
-    const otherName = document.getElementById(other+'DsName')?.value?.trim();
-    if(otherNew && otherName && otherName.toLowerCase()===v.toLowerCase())
-      return setMsg(id,'err','Input and Output datasets cannot have the same name');
-    return setMsg(id,'err',`"${v}" was already added in this session`);
-  }
-  if(dup==='db') return setMsg(id,'err',`"${v}" already exists in the database`);
-  // cross-check: input vs output
-  if(side==='output') {
-    const inName = document.getElementById('inputDsName')?.value?.trim();
-    const inNew  = document.getElementById('newInputDs')?.checked;
-    if(inNew && inName && inName.toLowerCase()===v.toLowerCase())
-      return setMsg(id,'err','Output dataset name must differ from the Input dataset name');
-  }
-  setMsg(id,'ok','✓ Valid and unique');
-}
-
-function liveValidateIdent(id, required) {
-  const v = document.getElementById(id)?.value?.trim();
-  if(!v) { if(required) return setMsg(id,'err','Required'); return setMsg(id,'',''); }
-  if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(v))
-    return setMsg(id,'err','Must be a valid SQL identifier (letters, numbers, underscores; cannot start with a digit)');
-  setMsg(id,'ok','✓');
-}
-
-function liveValidateContainer(id, required) {
-  const v = document.getElementById(id)?.value?.trim();
-  if(!v) { if(required) return setMsg(id,'err','Required'); return setMsg(id,'',''); }
-  if(!/^[a-z0-9][a-z0-9\-]{1,61}[a-z0-9]$/.test(v))
-    return setMsg(id,'err','Azure container names: lowercase letters, numbers, hyphens only; 3–63 chars; start/end with letter or digit');
-  setMsg(id,'ok','✓');
-}
-
-function liveValidatePath(id) {
-  const v = document.getElementById(id)?.value?.trim();
-  if(!v) return setMsg(id,'','');
-  if(!v.startsWith('/')) return setMsg(id,'warn','Folder path should start with /');
-  setMsg(id,'ok','✓');
+function liveValidateDomain() {
+  const v=document.getElementById('domainName').value.trim();
+  if(!v) return setMsg('domainName','err','Required');
+  if(v.length<2)  return setMsg('domainName','err','Min 2 characters');
+  if(!/^[A-Za-z]/.test(v)) return setMsg('domainName','err','Must start with a letter');
+  if(!/^[A-Za-z][A-Za-z0-9 \-_]*$/.test(v)) return setMsg('domainName','err','Only letters, numbers, spaces, hyphens, underscores');
+  const dup=isDuplicate(v,'domains');
+  if(dup==='session') return setMsg('domainName','err',`"${v}" already added this session`);
+  if(dup==='db')      return setMsg('domainName','err',`"${v}" already exists in the database`);
+  setMsg('domainName','ok','✓ Valid');
 }
 
 function liveValidateWmValue() {
-  const v = document.getElementById('wmValue').value;
+  const v=document.getElementById('wmValue').value;
   if(!v) return setMsg('wmValue','err','Required');
-  if(new Date(v) >= new Date()) return setMsg('wmValue','err','Watermark value must be in the past');
-  setMsg('wmValue','ok','✓ Valid');
+  if(new Date(v)>=new Date()) return setMsg('wmValue','err','Must be in the past');
+  setMsg('wmValue','ok','✓');
 }
-
 function liveValidateWmColumn() {
-  const v = document.getElementById('wmColumn').value.trim();
+  const v=document.getElementById('wmColumn').value.trim();
   if(!v) return setMsg('wmColumn','err','Required');
-  if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(v))
-    return setMsg('wmColumn','err','Must be a valid SQL column name (letters, numbers, underscores; cannot start with digit)');
-  if(v.length>128) return setMsg('wmColumn','err','Max 128 characters');
-  setMsg('wmColumn','ok','✓ Valid SQL column name');
+  if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(v)) return setMsg('wmColumn','err','Valid SQL identifier: letters/numbers/underscores, cannot start with digit');
+  setMsg('wmColumn','ok','✓');
 }
-
 function liveValidateWmExisting() {
-  const v = +document.getElementById('wmExistingId').value;
-  if(!v || v<2) return setMsg('wmExistingId','err','Must be ≥ 2 (ID 1 is reserved for the default placeholder)');
+  const v=+document.getElementById('wmExistingId').value;
+  if(!v||v<2) return setMsg('wmExistingId','err','Must be ≥ 2 (ID 1 is reserved)');
   setMsg('wmExistingId','ok','✓');
 }
-
 function liveValidateJobName() {
-  const v = document.getElementById('jobName').value.trim();
+  const v=document.getElementById('jobName').value.trim();
   if(!v) return setMsg('jobName','err','Required');
+  if(/\s/.test(v)) return setMsg('jobName','err','No spaces — use underscores');
+  if(!/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) return setMsg('jobName','err','Letters, numbers, underscores only; must start with a letter');
   if(v.length>200) return setMsg('jobName','err','Max 200 characters');
-  if(/\s/.test(v)) return setMsg('jobName','err','No spaces allowed — use underscores');
-  if(!/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) return setMsg('jobName','err','Only letters, numbers, underscores; must start with a letter');
-  const dup = isDuplicate(v,'jobs');
-  if(dup==='session') return setMsg('jobName','err',`"${v}" was already added in this session`);
+  const dup=isDuplicate(v,'jobs');
+  if(dup==='session') return setMsg('jobName','err',`"${v}" already added this session`);
   if(dup==='db')      return setMsg('jobName','err',`"${v}" already exists in the database`);
   setMsg('jobName','ok','✓ Valid and unique');
 }
-
 function liveValidateAdfName() {
-  const v = document.getElementById('adfName').value.trim();
+  const v=document.getElementById('adfName').value.trim();
   if(!v) return setMsg('adfName','err','Required');
-  if(!/^[A-Za-z][A-Za-z0-9\-]{1,61}[A-Za-z0-9]$/.test(v))
-    return setMsg('adfName','err','3–63 chars; letters, numbers, hyphens only; must start with a letter; must not end with a hyphen');
+  if(!/^[A-Za-z][A-Za-z0-9\-]{1,61}[A-Za-z0-9]$/.test(v)) return setMsg('adfName','err','3–63 chars; letters/numbers/hyphens; start with letter; no trailing hyphen');
   setMsg('adfName','ok','✓');
 }
-
 function liveValidateTrigger() {
-  const v = document.getElementById('triggerName').value.trim();
+  const v=document.getElementById('triggerName').value.trim();
   if(!v) return setMsg('triggerName','err','Required');
-  if(/\s/.test(v)) return setMsg('triggerName','err','No spaces — use underscores');
-  if(!/^[A-Za-z][A-Za-z0-9_\-]*$/.test(v)) return setMsg('triggerName','err','Only letters, numbers, hyphens, underscores; must start with a letter');
-  if(v.length>200) return setMsg('triggerName','err','Max 200 characters');
+  if(/\s/.test(v)) return setMsg('triggerName','err','No spaces');
+  if(!/^[A-Za-z][A-Za-z0-9_\-]*$/.test(v)) return setMsg('triggerName','err','Letters, numbers, hyphens, underscores; must start with letter');
   setMsg('triggerName','ok','✓');
 }
-
 function liveValidateJson(id) {
-  const v = document.getElementById(id).value.trim();
+  const v=document.getElementById(id).value.trim();
   try {
     JSON.parse(v||'{}');
-    if(v==='{}'||v==='') return setMsg(id,'warn','Settings are empty {} — populate when configuring the job');
+    if(v==='{}'||!v) return setMsg(id,'warn','Settings are empty {} — populate per-job runtime values here');
     setMsg(id,'ok','✓ Valid JSON');
   } catch(e) { setMsg(id,'err','Invalid JSON: '+e.message); }
 }
 
-// ══════════════════════════════════════════════════════ STEP VALIDATION (on Next)
+// ════════════════════════════════════════════ STEP VALIDATION
 function validateStep(step) {
-  let ok = true;
-  const require = (id,msg) => { const v=document.getElementById(id)?.value?.trim(); if(!v){setMsg(id,'err',msg);ok=false;} return v; };
-  const noErr   = id => { const el=document.getElementById('vmsg-'+id); return !el||!el.classList.contains('vmsg')||!el.textContent||el.classList.contains('ok')||el.classList.contains('warn'); };
-
+  let ok=true;
   if(step===1) {
     if(document.getElementById('newDomain').checked) {
-      liveValidate('domainName');
+      liveValidateDomain();
       if(document.getElementById('vmsg-domainName').classList.contains('err')) ok=false;
     }
   }
-
   if(step===2) {
-    if(document.getElementById('newInputDs').checked) {
-      liveValidateSelect('inputLs');
-      if(document.getElementById('vmsg-inputLs').classList.contains('err')) ok=false;
-      const lsId = +document.getElementById('inputLs').value;
-      const ls = LINKED_SERVICES.find(l=>l.id===lsId);
-      if(ls) {
-        if(SQL_SRCS.includes(ls.srcRef))  { liveValidateIdent('inputTable',true);     if(document.getElementById('vmsg-inputTable')?.classList.contains('err')) ok=false; }
-        if(FILE_SRCS.includes(ls.srcRef)) { liveValidateContainer('inputContainer',true); if(document.getElementById('vmsg-inputContainer')?.classList.contains('err')) ok=false; }
-        if(FILE_SRCS.includes(ls.srcRef) && !document.getElementById('inputFf').value)
-          { setMsg('inputFf','warn','Selecting a file format is recommended for file-based datasets'); }
-      }
-      liveValidateDsName('inputDsName','input');
-      if(document.getElementById('vmsg-inputDsName').classList.contains('err')) ok=false;
-    } else {
-      require('inputDs-existingName','Existing dataset name is required');
-    }
+    ['inputSrc','inputFmt'].forEach(id=>{liveValidateSelect(id); if(document.getElementById('vmsg-'+id).classList.contains('err')) ok=false;});
+    if(!getSelectedDs('input')) { setMsg('inputFmt','err','No matching dataset found for this combination'); ok=false; }
   }
-
   if(step===3) {
-    if(document.getElementById('newOutputDs').checked) {
-      liveValidateSelect('outputLs');
-      if(document.getElementById('vmsg-outputLs').classList.contains('err')) ok=false;
-      const lsId = +document.getElementById('outputLs').value;
-      const ls = LINKED_SERVICES.find(l=>l.id===lsId);
-      if(ls) {
-        if(SQL_SRCS.includes(ls.srcRef))  { liveValidateIdent('outputTable',true);      if(document.getElementById('vmsg-outputTable')?.classList.contains('err')) ok=false; }
-        if(FILE_SRCS.includes(ls.srcRef)) { liveValidateContainer('outputContainer',true); if(document.getElementById('vmsg-outputContainer')?.classList.contains('err')) ok=false; }
-      }
-      liveValidateDsName('outputDsName','output');
-      if(document.getElementById('vmsg-outputDsName').classList.contains('err')) ok=false;
-    } else {
-      require('outputDs-existingName','Existing dataset name is required');
-    }
+    ['outputSrc','outputFmt'].forEach(id=>{liveValidateSelect(id); if(document.getElementById('vmsg-'+id).classList.contains('err')) ok=false;});
+    if(!getSelectedDs('output')) { setMsg('outputFmt','err','No matching dataset found for this combination'); ok=false; }
   }
-
   if(step===4) {
-    const isIncr = document.querySelector('input[name=loadType]:checked').value==='1';
+    const isIncr=document.querySelector('input[name=loadType]:checked').value==='1';
     if(isIncr) {
       if(document.getElementById('newWatermark').checked) {
-        liveValidateWmValue();  if(document.getElementById('vmsg-wmValue').classList.contains('err'))  ok=false;
+        liveValidateWmValue(); if(document.getElementById('vmsg-wmValue').classList.contains('err')) ok=false;
         liveValidateWmColumn(); if(document.getElementById('vmsg-wmColumn').classList.contains('err')) ok=false;
       } else {
         liveValidateWmExisting(); if(document.getElementById('vmsg-wmExistingId').classList.contains('err')) ok=false;
       }
     }
   }
-
   if(step===5) {
     liveValidateJobName();  if(document.getElementById('vmsg-jobName').classList.contains('err'))  ok=false;
     liveValidateAdfName();  if(document.getElementById('vmsg-adfName').classList.contains('err'))  ok=false;
     liveValidateTrigger();  if(document.getElementById('vmsg-triggerName').classList.contains('err')) ok=false;
-    liveValidateJson('settingsInput');
-    liveValidateJson('settingsOutput');
-    if(document.getElementById('vmsg-settingsInput').classList.contains('err'))  ok=false;
-    if(document.getElementById('vmsg-settingsOutput').classList.contains('err')) ok=false;
-    // Cross: domain from Step 1
-    const domSel = document.getElementById('jobDomain').value;
-    if(domSel==='__new__' && !document.getElementById('newDomain').checked) {
-      setMsg('jobDomain','err','No domain was entered in Step 1 — go back or select NULL'); ok=false;
-    }
+    liveValidateSelect('inputLs');  if(document.getElementById('vmsg-inputLs').classList.contains('err'))  ok=false;
+    liveValidateSelect('outputLs'); if(document.getElementById('vmsg-outputLs').classList.contains('err')) ok=false;
+    liveValidateJson('settingsInput');  if(document.getElementById('vmsg-settingsInput').classList.contains('err'))  ok=false;
+    liveValidateJson('settingsOutput'); if(document.getElementById('vmsg-settingsOutput').classList.contains('err')) ok=false;
+    const domSel=document.getElementById('jobDomain').value;
+    if(domSel==='__new__'&&!document.getElementById('newDomain').checked) { setMsg('jobDomain','err','No domain in Step 1'); ok=false; }
   }
   return ok;
 }
 
-// ══════════════════════════════════════════════════════ SQL GENERATION
+// ════════════════════════════════════════════ SQL GENERATION
 function generateSQL() {
-  if(!validateStep(5)) { /* generate anyway but show warnings */ }
   const isIncr   = document.querySelector('input[name=loadType]:checked').value==='1';
   const actType  = document.querySelector('input[name=actType]:checked').value;
   const isActive = document.querySelector('input[name=isActive]:checked').value;
   const newDomain= document.getElementById('newDomain').checked;
   const domName  = document.getElementById('domainName').value.trim();
-  const newInDs  = document.getElementById('newInputDs').checked;
-  const newOutDs = document.getElementById('newOutputDs').checked;
   const newWm    = document.getElementById('newWatermark').checked && isIncr;
+  const inDs     = getSelectedDs('input');
+  const outDs    = getSelectedDs('output');
+  const inLsId   = +document.getElementById('inputLs').value;
+  const outLsId  = +document.getElementById('outputLs').value;
+  const inLs     = LINKED_SERVICES.find(l=>l.id===inLsId);
+  const outLs    = LINKED_SERVICES.find(l=>l.id===outLsId);
+  const jobName  = document.getElementById('jobName').value.trim();
 
   // Track session
-  if(newDomain && domName && !session.domains.includes(domName.toLowerCase()))
-    session.domains.push(domName.toLowerCase());
-  const inDsName  = newInDs  ? document.getElementById('inputDsName').value.trim()  : null;
-  const outDsName = newOutDs ? document.getElementById('outputDsName').value.trim() : null;
-  if(inDsName  && !session.datasets.includes(inDsName.toLowerCase()))  session.datasets.push(inDsName.toLowerCase());
-  if(outDsName && !session.datasets.includes(outDsName.toLowerCase())) session.datasets.push(outDsName.toLowerCase());
-  const jobName = document.getElementById('jobName').value.trim();
-  if(jobName && !session.jobs.includes(jobName.toLowerCase())) session.jobs.push(jobName.toLowerCase());
+  if(newDomain&&domName&&!session.domains.includes(domName.toLowerCase())) session.domains.push(domName.toLowerCase());
+  if(jobName&&!session.jobs.includes(jobName.toLowerCase())) session.jobs.push(jobName.toLowerCase());
 
   let sql='', summaryItems=[];
-
-  const dsBlock=(side,label)=>{
-    const isNew=document.getElementById('new'+cap(side)+'Ds').checked;
-    if(!isNew) return `-- ${label}: existing '${esc(document.getElementById(side+'Ds-existingName').value.trim())}'\n\n`;
-    const lsId=+document.getElementById(side+'Ls').value;
-    const ls=LINKED_SERVICES.find(l=>l.id===lsId)||{};
-    const ffId=+document.getElementById(side+'Ff').value||null;
-    const ff=FILE_FORMATS.find(f=>f.id===ffId);
-    const dsName=esc(document.getElementById(side+'DsName').value.trim());
-    const schema=nullOrStr(document.getElementById(side+'Schema')?.value?.trim());
-    const table =nullOrStr(document.getElementById(side+'Table')?.value?.trim());
-    const cont  =nullOrStr(document.getElementById(side+'Container')?.value?.trim());
-    const folder=nullOrStr(document.getElementById(side+'Folder')?.value?.trim());
-    const file  =nullOrStr(document.getElementById(side+'File')?.value?.trim());
-    const ffVal =ff?`(SELECT FileFormat_ID FROM EDP_Metadata.FileFormat WHERE Format='${ff.format}')`:'NULL';
-    summaryItems.push(`${label}: <strong>${dsName}</strong> (${ls.name||'?'}${ff?' → '+ff.format:''})`);
-    return [
-      `-- ── ${label} ─────────────────────────────────────────────────`,
-      `DECLARE @${side}DsId INT;`,
-      `IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.DatasetRef WHERE Dataset_Name = '${dsName}')`,
-      `BEGIN`,
-      `    INSERT INTO EDP_Metadata.DatasetRef`,
-      `        (Dataset_Name, LinkedService_ID, FileFormat_ID, Schema_Name, Table_Name, Container, FolderPath, FileName)`,
-      `    VALUES (`,
-      `        '${dsName}',`,
-      `        (SELECT LinkedService_ID FROM EDP_Metadata.LinkedServiceRef WHERE LinkedServiceName = '${ls.name}'),`,
-      `        ${ffVal},`,
-      `        ${schema}, ${table}, ${cont}, ${folder}, ${file}`,
-      `    );`,
-      `END`,
-      `SET @${side}DsId = (SELECT Dataset_ID FROM EDP_Metadata.DatasetRef WHERE Dataset_Name = '${dsName}');`,``
-    ].join('\n');
-  };
 
   sql+=`-- ═══════════════════════════════════════════════════════════\n`;
   sql+=`-- EDP Metadata INSERT Scripts\n`;
@@ -926,75 +750,77 @@ function generateSQL() {
   sql+=`-- ═══════════════════════════════════════════════════════════\n\n`;
   sql+=`BEGIN TRANSACTION;\n\n`;
 
-  if(newDomain && domName) {
-    summaryItems.unshift(`Business Domain: <strong>${domName}</strong>`);
-    sql+=`-- ── Business Domain ───────────────────────────────────────────\n`;
+  // Business Domain
+  if(newDomain&&domName) {
+    summaryItems.push(`New Domain: <strong>${domName}</strong>`);
+    sql+=`-- ── Business Domain ────────────────────────────────────────────\n`;
     sql+=`DECLARE @DomainId INT;\n`;
-    sql+=`IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name = '${esc(domName)}')\n`;
-    sql+=`BEGIN\n    INSERT INTO EDP_Metadata.BusinessDomainRef (Business_Domain_Name) VALUES ('${esc(domName)}');\nEND\n`;
-    sql+=`SET @DomainId = (SELECT Business_Domain_ID FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name = '${esc(domName)}');\n\n`;
+    sql+=`IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name='${esc(domName)}')\n`;
+    sql+=`    INSERT INTO EDP_Metadata.BusinessDomainRef (Business_Domain_Name) VALUES ('${esc(domName)}');\n`;
+    sql+=`SET @DomainId = (SELECT Business_Domain_ID FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name='${esc(domName)}');\n\n`;
   }
 
-  sql+=dsBlock('input','Input Dataset (Source)');
-  sql+=dsBlock('output','Output Dataset (Target)');
-
-  if(newWm) {
-    const wmDate = document.getElementById('wmValue').value.replace('T',' ');
-    const wmCol  = esc(document.getElementById('wmColumn').value.trim());
-    summaryItems.push(`Watermark: column <strong>${wmCol}</strong>, start <strong>${wmDate}</strong>`);
-    sql+=`-- ── Watermark ──────────────────────────────────────────────────\n`;
-    sql+=`DECLARE @WatermarkId INT;\n`;
-    sql+=`INSERT INTO EDP_Metadata.Watermark (Watermark_Value, Watermark_Column)\n`;
-    sql+=`VALUES (CAST('${wmDate}' AS DATETIME), '${wmCol}');\n`;
-    sql+=`SET @WatermarkId = SCOPE_IDENTITY();\n\n`;
+  // Watermark
+  let wmRef='NULL';
+  if(isIncr) {
+    if(newWm) {
+      const wmDate=document.getElementById('wmValue').value.replace('T',' ');
+      const wmCol=esc(document.getElementById('wmColumn').value.trim());
+      summaryItems.push(`New Watermark: column <strong>${wmCol}</strong>, start <strong>${wmDate}</strong>`);
+      sql+=`-- ── Watermark ──────────────────────────────────────────────────\n`;
+      sql+=`DECLARE @WatermarkId INT;\n`;
+      sql+=`INSERT INTO EDP_Metadata.Watermark (Watermark_Value, Watermark_Column)\nVALUES (CAST('${wmDate}' AS DATETIME), '${wmCol}');\n`;
+      sql+=`SET @WatermarkId = SCOPE_IDENTITY();\n\n`;
+      wmRef='@WatermarkId';
+    } else {
+      wmRef=document.getElementById('wmExistingId').value||'NULL';
+    }
   }
 
-  const domSel = document.getElementById('jobDomain').value;
+  // MetadataRef
+  const domSel=document.getElementById('jobDomain').value;
   const domainSql = (newDomain&&domName&&domSel==='__new__') ? '@DomainId'
                   : (!domSel||domSel==='') ? 'NULL'
-                  : `(SELECT Business_Domain_ID FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name = '${esc(domSel)}')`;
-  const inRef  = newInDs  ? '@inputDsId'  : `(SELECT Dataset_ID FROM EDP_Metadata.DatasetRef WHERE Dataset_Name='${esc(document.getElementById('inputDs-existingName').value.trim())}')`;
-  const outRef = newOutDs ? '@outputDsId' : `(SELECT Dataset_ID FROM EDP_Metadata.DatasetRef WHERE Dataset_Name='${esc(document.getElementById('outputDs-existingName').value.trim())}')`;
-  const wmRef  = !isIncr ? 'NULL' : (newWm ? '@WatermarkId' : (document.getElementById('wmExistingId').value||'NULL'));
+                  : `(SELECT Business_Domain_ID FROM EDP_Metadata.BusinessDomainRef WHERE Business_Domain_Name='${esc(domSel)}')`;
   const settIn  = esc(document.getElementById('settingsInput').value.trim()||'{}');
   const settOut = esc(document.getElementById('settingsOutput').value.trim()||'{}');
   const adfName = esc(document.getElementById('adfName').value.trim());
   const trigName= esc(document.getElementById('triggerName').value.trim());
+  const inDsRef = inDs ? `(SELECT Dataset_ID FROM EDP_Metadata.DatasetRef WHERE Dataset_Name='${inDs.name}')` : 'NULL';
+  const outDsRef= outDs ? `(SELECT Dataset_ID FROM EDP_Metadata.DatasetRef WHERE Dataset_Name='${outDs.name}')` : 'NULL';
+  const inLsRef = inLs ? `(SELECT LinkedService_ID FROM EDP_Metadata.LinkedServiceRef WHERE LinkedServiceName='${inLs.name}')` : 'NULL';
+  const outLsRef= outLs ? `(SELECT LinkedService_ID FROM EDP_Metadata.LinkedServiceRef WHERE LinkedServiceName='${outLs.name}')` : 'NULL';
 
-  summaryItems.push(`Metadata Job: <strong>${jobName}</strong> | ${['Full Refresh','Incremental'][isIncr?1:0]} | ${['Ingress','Egress'][+actType]} | ${['InActive','Active'][+isActive]}`);
+  summaryItems.push(`Input:  Dataset <strong>${inDs?.name||'?'}</strong> via <strong>${inLs?.name||'?'}</strong>`);
+  summaryItems.push(`Output: Dataset <strong>${outDs?.name||'?'}</strong> via <strong>${outLs?.name||'?'}</strong>`);
+  summaryItems.push(`Job: <strong>${jobName}</strong> | ${isIncr?'Incremental':'Full Refresh'} | ${+actType?'Egress':'Ingress'} | ${+isActive?'Active':'InActive'}`);
 
   sql+=`-- ── Metadata Job ───────────────────────────────────────────────\n`;
-  sql+=`IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.MetadataRef WHERE Metadata_Job = '${esc(jobName)}')\nBEGIN\n`;
+  sql+=`IF NOT EXISTS (SELECT 1 FROM EDP_Metadata.MetadataRef WHERE Metadata_Job='${esc(jobName)}')\nBEGIN\n`;
   sql+=`    INSERT INTO EDP_Metadata.MetadataRef\n`;
   sql+=`        (Metadata_Job, Business_Domain_ID, ADF_Name, Trigger_Name,\n`;
   sql+=`         InputDataset_ID, OutputDataset_ID,\n`;
+  sql+=`         InputLinkedServiceConnectionID, OutputLinkedServiceConnectionID,\n`;
   sql+=`         MetadataSettingsInput, MetadataSettingsOutput,\n`;
   sql+=`         ActivityType, IsActive, Load_Type, Watermark_ID)\n`;
   sql+=`    VALUES (\n`;
   sql+=`        '${esc(jobName)}',\n        ${domainSql},\n        '${adfName}', '${trigName}',\n`;
-  sql+=`        ${inRef},\n        ${outRef},\n        '${settIn}', '${settOut}',\n`;
-  sql+=`        ${actType}, ${isActive}, ${isIncr?1:0}, ${wmRef}\n    );\nEND\n\n`;
+  sql+=`        ${inDsRef},\n        ${outDsRef},\n`;
+  sql+=`        ${inLsRef},\n        ${outLsRef},\n`;
+  sql+=`        '${settIn}', '${settOut}',\n        ${actType}, ${isActive}, ${isIncr?1:0}, ${wmRef}\n    );\nEND\n\n`;
   sql+=`COMMIT TRANSACTION;\n\n`;
-  sql+=`-- ✓ Verify:\n-- SELECT * FROM EDP_Metadata.MasterRef WHERE Metadata_Job = '${esc(jobName)}';`;
+  sql+=`-- ✓ Verify:\n-- SELECT * FROM EDP_Metadata.MasterRef WHERE Metadata_Job='${esc(jobName)}';`;
 
-  document.getElementById('sqlOutput').textContent = sql;
+  document.getElementById('sqlOutput').textContent=sql;
   document.getElementById('sqlSummary').innerHTML =
-    '<div class="mb-2 fw-semibold" style="font-size:.82rem">What will be created:</div>' +
+    '<div class="mb-2 fw-semibold" style="font-size:.82rem">What will be created:</div>'+
     summaryItems.map(i=>`<div class="summary-item"><i class="bi bi-check-circle-fill text-success"></i>${i}</div>`).join('');
 }
 
-// ══════════════════════════════════════════════════════ HELPERS
-const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
 const esc = s => (s||'').replace(/'/g,"''");
-const nullOrStr = v => (v&&v.length)?`'${esc(v)}'`:'NULL';
-
 function copyAll() {
   navigator.clipboard.writeText(document.getElementById('sqlOutput').textContent)
-    .then(()=>showToast('SQL copied to clipboard!'));
-}
-function showToast(msg) {
-  document.getElementById('toastMsg').textContent=msg;
-  new bootstrap.Toast(document.getElementById('toast'),{delay:2500}).show();
+    .then(()=>{document.getElementById('toastMsg').textContent='SQL copied!'; new bootstrap.Toast(document.getElementById('toast'),{delay:2000}).show();});
 }
 
 window.onload = init;
