@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280">
+  <title>Azure Metadata-Driven Ingestion Accelerator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #d0d4da;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    }
+
+    /* ── Slide canvas: 16:9 ─────────────────────────────────────── */
+    .slide {
+      width: 1280px;
+      height: 720px;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.28);
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(110deg, #002050 0%, #0078D4 65%, #00b4e8 100%);
+      padding: 22px 44px 18px;
+      position: relative;
+    }
+    .header-accent {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 340px; height: 100%;
+      background: rgba(255,255,255,0.04);
+      clip-path: polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #ff6b35;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      padding: 3px 11px;
+      border-radius: 2px;
+      margin-bottom: 7px;
+    }
+    .h-title {
+      color: #ffffff;
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      line-height: 1.15;
+    }
+    .h-sub {
+      color: rgba(255,255,255,0.82);
+      font-size: 13px;
+      margin-top: 5px;
+      font-weight: 400;
+    }
+    .azure-logo {
+      position: absolute;
+      top: 20px; right: 40px;
+      color: rgba(255,255,255,0.88);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .azure-logo-icon {
+      width: 22px; height: 22px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+
+    /* ── Body ────────────────────────────────────────────────────── */
+    .body {
+      display: flex;
+      height: 582px; /* 720 - header (~138) */
+    }
+
+    /* ── Left: Architecture ──────────────────────────────────────── */
+    .left {
+      flex: 1.05;
+      padding: 22px 28px 18px 44px;
+      border-right: 1px solid #e4e8ef;
+      display: flex;
+      flex-direction: column;
+    }
+    .section-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #0078D4;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    /* Flow diagram */
+    .sources-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .src-chip {
+      background: #eef5fb;
+      border: 1.5px solid #0078D4;
+      color: #002050;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 3px 0 3px 16px;
+    }
+    .arrow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .arrow-shaft { width: 2px; height: 14px; background: #0078D4; }
+    .arrow-head {
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 7px solid #0078D4;
+    }
+    .arrow-note { font-size: 10px; color: #0078D4; font-weight: 600; }
+
+    .flow-box {
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 4px;
+    }
+    .box-ctrl {
+      background: #002050;
+      color: white;
+    }
+    .box-ctrl-title { font-size: 13px; font-weight: 700; }
+    .box-ctrl-sub { font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 3px; line-height: 1.5; }
+
+    .pipelines-row { display: flex; gap: 8px; margin-bottom: 4px; }
+    .box-pipe {
+      flex: 1;
+      background: #0078D4;
+      color: white;
+      border-radius: 6px;
+      padding: 9px 14px;
+      text-align: center;
+    }
+    .pipe-title { font-size: 12px; font-weight: 700; }
+    .pipe-sub { font-size: 10px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+
+    .box-target {
+      background: #e8f5e9;
+      border: 1.5px solid #43a047;
+      border-radius: 6px;
+      padding: 10px 16px;
+      text-align: center;
+    }
+    .target-title { font-size: 12.5px; font-weight: 700; color: #1b5e20; }
+    .target-sub { font-size: 10px; color: #388e3c; margin-top: 2px; }
+
+    /* ── Right: Capabilities ─────────────────────────────────────── */
+    .right {
+      flex: 1;
+      padding: 22px 40px 18px 28px;
+      display: flex;
+      flex-direction: column;
+    }
+    .cap-list { display: flex; flex-direction: column; gap: 11px; }
+    .cap-item { display: flex; align-items: flex-start; gap: 11px; }
+    .cap-icon {
+      width: 30px; height: 30px; flex-shrink: 0;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .cap-title { font-size: 12.5px; font-weight: 700; color: #111827; }
+    .cap-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.45; }
+
+    /* Stats bar */
+    .stats-bar {
+      margin-top: auto;
+      display: flex;
+      background: linear-gradient(110deg, #002050, #0078D4);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .stat {
+      flex: 1;
+      padding: 11px 10px;
+      text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.14);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-num { color: #ffffff; font-size: 21px; font-weight: 700; line-height: 1; }
+    .stat-lbl { color: rgba(255,255,255,0.72); font-size: 9.5px; margin-top: 3px; line-height: 1.3; }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #f7f8fa;
+      border-top: 1px solid #e4e8ef;
+      padding: 7px 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-left { font-size: 9.5px; color: #9ca3af; }
+    .tech-tags { display: flex; gap: 8px; }
+    .tech-tag {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #0078D4;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      padding: 2px 9px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-accent"></div>
+    <div class="badge">&#9889; Accelerator</div>
+    <div class="h-title">Azure Metadata-Driven Ingestion Framework</div>
+    <div class="h-sub">Config-driven, zero-code pipeline generation for scalable multi-source data ingestion on Azure Data Factory</div>
+    <div class="azure-logo">
+      <div class="azure-logo-icon">&#9729;</div>
+      Microsoft Azure
+    </div>
+  </div>
+
+  <!-- ── Body ───────────────────────────────────────────────────── -->
+  <div class="body">
+
+    <!-- Left: Architecture Flow -->
+    <div class="left">
+      <div class="section-label">Solution Architecture</div>
+
+      <!-- Sources -->
+      <div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px;">Data Sources</div>
+      <div class="sources-row">
+        <span class="src-chip">ADLS Gen2</span>
+        <span class="src-chip">Azure SQL</span>
+        <span class="src-chip">SFTP / FTP</span>
+        <span class="src-chip">REST API</span>
+        <span class="src-chip">Cosmos DB</span>
+        <span class="src-chip">Databricks</span>
+        <span class="src-chip">Oracle / MySQL</span>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div class="arrow-line">
+          <div class="arrow-shaft"></div>
+          <div class="arrow-head"></div>
+        </div>
+        <span class="arrow-note">Source registered in metadata once</span>
+      </div>
+
+      <!-- Metadata Control Store -->
+      <div class="flow-box box-ctrl">
+        <div class="box-ctrl-title">EDP_Metadata Control Store &nbsp;·&nbsp; Azure SQL Database</div>
+        <div class="box-ctrl-sub">MetadataRef &nbsp;·&nbsp; DatasetRef &nbsp;·&nbsp; LinkedServiceRef &nbsp;·&nbsp; Watermark &nbsp;·&nbsp; SystemAuth &nbsp;·&nbsp; BusinessDomainRef</div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div class="arrow-line">
+          <div class="arrow-shaft"></div>
+          <div class="arrow-head"></div>
+        </div>
+        <span class="arrow-note">ADF Lookup Activity reads config at runtime</span>
+      </div>
+
+      <!-- ADF Pipelines -->
+      <div class="pipelines-row">
+        <div class="box-pipe">
+          <div class="pipe-title">Full Refresh Pipeline</div>
+          <div class="pipe-sub">Complete dataset reload</div>
+        </div>
+        <div class="box-pipe">
+          <div class="pipe-title">Incremental Pipeline</div>
+          <div class="pipe-sub">Watermark-based delta load</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow" style="padding-left:16px;">
+        <div class="arrow-line">
+          <div class="arrow-shaft" style="background:#43a047;"></div>
+          <div class="arrow-head" style="border-top-color:#43a047;"></div>
+        </div>
+      </div>
+
+      <!-- Target -->
+      <div class="box-target">
+        <div class="target-title">ADLS Gen2 Data Lake &nbsp;/&nbsp; Azure SQL &nbsp;/&nbsp; Azure Databricks</div>
+        <div class="target-sub">Bronze &nbsp;·&nbsp; Silver &nbsp;·&nbsp; Gold &nbsp;— unified landing zone</div>
+      </div>
+    </div>
+
+    <!-- Right: Key Capabilities + Stats -->
+    <div class="right">
+      <div class="section-label">Key Capabilities</div>
+
+      <div class="cap-list">
+        <div class="cap-item">
+          <div class="cap-icon" style="background:#dbeafe;">&#9889;</div>
+          <div>
+            <div class="cap-title">Zero-Code Source Onboarding</div>
+            <div class="cap-desc">New data sources are onboarded entirely through metadata configuration — no pipeline modifications, no deployments</div>
+          </div>
+        </div>
+        <div class="cap-item">
+          <div class="cap-icon" style="background:#ede9fe;">&#8635;</div>
+          <div>
+            <div class="cap-title">Full &amp; Incremental Load Out-of-the-Box</div>
+            <div class="cap-desc">Watermark-managed delta loads with automatic high-watermark tracking; Full Refresh on demand — same pipeline, metadata-driven</div>
+          </div>
+        </div>
+        <div class="cap-item">
+          <div class="cap-icon" style="background:#d1fae5;">&#128279;</div>
+          <div>
+            <div class="cap-title">10+ ADF Connectors, 12 File Formats</div>
+            <div class="cap-desc">Supports CSV, Parquet, JSON, Delta, Avro, ORC, Excel, XML, Binary, DelimitedText, Zip, Tar across ADLS, SQL, SFTP, REST and more</div>
+          </div>
+        </div>
+        <div class="cap-item">
+          <div class="cap-icon" style="background:#fef3c7;">&#128737;</div>
+          <div>
+            <div class="cap-title">Secure by Design</div>
+            <div class="cap-desc">Azure Key Vault for secrets · Managed Identity, Service Principal, SAS, OAuth2, SSH, API Key — all auth types catalogued</div>
+          </div>
+        </div>
+        <div class="cap-item">
+          <div class="cap-icon" style="background:#fce7f3;">&#128202;</div>
+          <div>
+            <div class="cap-title">Governance &amp; Domain Tagging</div>
+            <div class="cap-desc">Centralised job registry with business domain tagging, audit columns (Created, Modified, Modified_By), and active/inactive job control</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-num">10+</div>
+          <div class="stat-lbl">Source<br>Connectors</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">2</div>
+          <div class="stat-lbl">Generic<br>Pipelines</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">~80%</div>
+          <div class="stat-lbl">Faster<br>Onboarding</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">0</div>
+          <div class="stat-lbl">Code Changes<br>Per Source</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ── Footer ─────────────────────────────────────────────────── -->
+  <div class="footer">
+    <div class="footer-left">Confidential &nbsp;·&nbsp; For RFP Use Only</div>
+    <div class="tech-tags">
+      <span class="tech-tag">Azure Data Factory</span>
+      <span class="tech-tag">Azure SQL Database</span>
+      <span class="tech-tag">ADLS Gen2</span>
+      <span class="tech-tag">Azure Key Vault</span>
+      <span class="tech-tag">Azure Databricks</span>
+    </div>
+  </div>
+
+</div><!-- /slide -->
+</body>
+</html>
