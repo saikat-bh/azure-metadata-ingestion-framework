@@ -81,17 +81,4 @@ WHERE NOT EXISTS (
     SELECT 1 FROM EDP_Metadata.DatasetRef d WHERE d.Dataset_Name = v.Dataset_Name
 );
 
--- ── SQL / table-based sources (FileFormat_ID = NULL) ─────────────
-INSERT INTO EDP_Metadata.DatasetRef (Dataset_Name, Source_ID, FileFormat_ID)
-SELECT v.Dataset_Name,
-    (SELECT Source_ID FROM EDP_Metadata.SourceRef WHERE Source_Ref = v.SrcRef),
-    NULL
-FROM (
-    VALUES
-        ('DS_ASQL_TABLE',  'ASQL'),
-        ('DS_ORA_TABLE',   'ORA'),
-        ('DS_MYSQL_TABLE', 'MYSQL')
-) AS v(Dataset_Name, SrcRef)
-WHERE NOT EXISTS (
-    SELECT 1 FROM EDP_Metadata.DatasetRef d WHERE d.Dataset_Name = v.Dataset_Name
-);
+
