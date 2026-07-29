@@ -18,113 +18,142 @@
 --   MetadataSettingsInput/Output   : JSON carrying runtime params (path, table, server etc.)
 -- ============================================================
 
-IF NOT EXISTS (
-    SELECT 1
-    FROM   sys.tables  t
-    JOIN   sys.schemas s ON s.schema_id = t.schema_id
-    WHERE  s.name = 'EDP_Metadata'
-    AND    t.name = 'MetadataRef'
-)
-BEGIN
-    CREATE TABLE EDP_Metadata.MetadataRef (
-        Metadata_ID        INT            IDENTITY(1,1)  NOT NULL,
-        Metadata_Job       NVARCHAR(200)  NOT NULL,
-        Business_Domain_ID INT            NULL,
-        ADF_Name           NVARCHAR(100)  NOT NULL,
-        Trigger_Name       NVARCHAR(200)  NOT NULL,
-        InputDataset_ID                  INT            NULL,
-        OutputDataset_ID                 INT            NULL,
-        InputLinkedServiceConnectionID   INT            NULL,
-        OutputLinkedServiceConnectionID  INT            NULL,
-        MetadataSettingsInput  NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MetadataRef_SettingsInput  DEFAULT ('{}'),
-        MetadataSettingsOutput NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MetadataRef_SettingsOutput DEFAULT ('{}'),
-        ActivityType       BIT            NOT NULL  CONSTRAINT DF_MetadataRef_ActivityType DEFAULT (0),
-        IsActive           BIT            NOT NULL  CONSTRAINT DF_MetadataRef_IsActive     DEFAULT (0),
-        Load_Type          BIT            NOT NULL  CONSTRAINT DF_MetadataRef_LoadType     DEFAULT (0),
-        Watermark_ID       INT            NULL,
-        Created_Date       DATETIME       NOT NULL  CONSTRAINT DF_MetadataRef_CreatedDate  DEFAULT (GETDATE()),
-        Modified_Date      DATETIME       NOT NULL  CONSTRAINT DF_MetadataRef_ModifiedDate DEFAULT (GETDATE()),
-        Modified_By        NVARCHAR(100)  NOT NULL  CONSTRAINT DF_MetadataRef_ModifiedBy   DEFAULT (SYSTEM_USER),
+/****** Object:  Table [EDP_Metadata].[MetadataRef]    Script Date: 30/06/2026 2:21:36 PM ******/
+SET ANSI_NULLS ON
+GO
 
-        CONSTRAINT PK_MetadataRef
-            PRIMARY KEY CLUSTERED (Metadata_ID),
+SET QUOTED_IDENTIFIER ON
+GO
 
-        CONSTRAINT UQ_MetadataRef_Job
-            UNIQUE (Metadata_Job),
+CREATE TABLE [EDP_Metadata].[MetadataRef](
+	[Metadata_ID] [int] IDENTITY(1,1) NOT NULL,
+	[Metadata_Job] [nvarchar](200) NOT NULL,
+	[Business_Domain_ID] [int] NULL,
+	[ADF_Name] [nvarchar](100) NOT NULL,
+	[Trigger_Name] [nvarchar](200) NOT NULL,
+	[InputDataset_ID] [int] NULL,
+	[OutputDataset_ID] [int] NULL,
+	[Input_colDelRefID] [int] NULL,
+	[Output_colDelRefID] [int] NULL,
+	[InputLinkedServiceConnectionID] [int] NULL,
+	[OutputLinkedServiceConnectionID] [int] NULL,
+	[MetadataSettingsInput] [nvarchar](max) NOT NULL,
+	[MetadataSettingsOutput] [nvarchar](max) NOT NULL,
+	[ActivityType] [bit] NOT NULL,
+	[IsActive] [bit] NOT NULL,
+	[Load_Type] [bit] NOT NULL,
+	[Watermark_ID] [int] NULL,
+	[Created_Date] [datetime] NOT NULL,
+	[Modified_Date] [datetime] NOT NULL,
+	[Modified_By] [nvarchar](100) NOT NULL
+	
+ CONSTRAINT [PK_MetadataRef] PRIMARY KEY CLUSTERED 
+(
+	[Metadata_ID] ASC
+)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_MetadataRef_Job] UNIQUE NONCLUSTERED 
+(
+	[Metadata_Job] ASC
+)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
 
-        CONSTRAINT FK_MetadataRef_BusinessDomain
-            FOREIGN KEY (Business_Domain_ID)
-            REFERENCES EDP_Metadata.BusinessDomainRef (Business_Domain_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_SettingsInput]  DEFAULT ('{}') FOR [MetadataSettingsInput]
+GO
 
-        CONSTRAINT FK_MetadataRef_InputDataset
-            FOREIGN KEY (InputDataset_ID)
-            REFERENCES EDP_Metadata.DatasetRef (Dataset_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_SettingsOutput]  DEFAULT ('{}') FOR [MetadataSettingsOutput]
+GO
 
-        CONSTRAINT FK_MetadataRef_OutputDataset
-            FOREIGN KEY (OutputDataset_ID)
-            REFERENCES EDP_Metadata.DatasetRef (Dataset_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_ActivityType]  DEFAULT ((0)) FOR [ActivityType]
+GO
 
-        CONSTRAINT FK_MetadataRef_InputLS
-            FOREIGN KEY (InputLinkedServiceConnectionID)
-            REFERENCES EDP_Metadata.LinkedServiceRef (LinkedService_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_IsActive]  DEFAULT ((0)) FOR [IsActive]
+GO
 
-        CONSTRAINT FK_MetadataRef_OutputLS
-            FOREIGN KEY (OutputLinkedServiceConnectionID)
-            REFERENCES EDP_Metadata.LinkedServiceRef (LinkedService_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_LoadType]  DEFAULT ((0)) FOR [Load_Type]
+GO
 
-        CONSTRAINT FK_MetadataRef_Watermark
-            FOREIGN KEY (Watermark_ID)
-            REFERENCES EDP_Metadata.Watermark (Watermark_ID),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_CreatedDate]  DEFAULT (getdate()) FOR [Created_Date]
+GO
 
-        CONSTRAINT CK_MetadataRef_ActivityType
-            CHECK (ActivityType IN (0, 1)),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_ModifiedDate]  DEFAULT (getdate()) FOR [Modified_Date]
+GO
 
-        CONSTRAINT CK_MetadataRef_IsActive
-            CHECK (IsActive IN (0, 1)),
+ALTER TABLE [EDP_Metadata].[MetadataRef] ADD  CONSTRAINT [DF_MetadataRef_ModifiedBy]  DEFAULT (suser_sname()) FOR [Modified_By]
+GO
 
-        CONSTRAINT CK_MetadataRef_LoadType
-            CHECK (Load_Type IN (0, 1))
-    );
-END
-ELSE
-BEGIN
-    -- Drop old LS FK constraints and columns if upgrading
-    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_MetadataRef_InputLS' AND parent_object_id = OBJECT_ID('EDP_Metadata.MetadataRef'))
-        ALTER TABLE EDP_Metadata.MetadataRef DROP CONSTRAINT FK_MetadataRef_InputLS;
-    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_MetadataRef_OutputLS' AND parent_object_id = OBJECT_ID('EDP_Metadata.MetadataRef'))
-        ALTER TABLE EDP_Metadata.MetadataRef DROP CONSTRAINT FK_MetadataRef_OutputLS;
-    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'InputLinkedServiceConnectionID')
-        ALTER TABLE EDP_Metadata.MetadataRef DROP COLUMN InputLinkedServiceConnectionID;
-    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'OutputLinkedServiceConnectionID')
-        ALTER TABLE EDP_Metadata.MetadataRef DROP COLUMN OutputLinkedServiceConnectionID;
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_BusinessDomain] FOREIGN KEY([Business_Domain_ID])
+REFERENCES [EDP_Metadata].[BusinessDomainRef] ([Business_Domain_ID])
+GO
 
-    -- Drop old Watermark default+constraint (NOT NULL -> NULL)
-    IF EXISTS (SELECT 1 FROM sys.default_constraints WHERE name = 'DF_MetadataRef_WatermarkID' AND parent_object_id = OBJECT_ID('EDP_Metadata.MetadataRef'))
-        ALTER TABLE EDP_Metadata.MetadataRef DROP CONSTRAINT DF_MetadataRef_WatermarkID;
-    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'Watermark_ID')
-        ALTER TABLE EDP_Metadata.MetadataRef ALTER COLUMN Watermark_ID INT NULL;
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_BusinessDomain]
+GO
 
-    -- Add DatasetRef FK columns
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'InputDataset_ID')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD InputDataset_ID INT NULL
-            CONSTRAINT FK_MetadataRef_InputDataset FOREIGN KEY REFERENCES EDP_Metadata.DatasetRef(Dataset_ID);
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'OutputDataset_ID')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD OutputDataset_ID INT NULL
-            CONSTRAINT FK_MetadataRef_OutputDataset FOREIGN KEY REFERENCES EDP_Metadata.DatasetRef(Dataset_ID);
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_InputColDelimiter] FOREIGN KEY([Input_colDelRefID])
+REFERENCES [EDP_Metadata].[colDelimitterRef] ([colDelRefID])
+GO
 
-    -- Add LinkedService FK columns (re-introduced after DatasetRef simplification)
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'InputLinkedServiceConnectionID')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD InputLinkedServiceConnectionID INT NULL
-            CONSTRAINT FK_MetadataRef_InputLS FOREIGN KEY REFERENCES EDP_Metadata.LinkedServiceRef(LinkedService_ID);
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'OutputLinkedServiceConnectionID')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD OutputLinkedServiceConnectionID INT NULL
-            CONSTRAINT FK_MetadataRef_OutputLS FOREIGN KEY REFERENCES EDP_Metadata.LinkedServiceRef(LinkedService_ID);
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_InputColDelimiter]
+GO
 
-    -- Add audit columns
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'Created_Date')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD Created_Date DATETIME NOT NULL CONSTRAINT DF_MetadataRef_CreatedDate DEFAULT (GETDATE());
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'Modified_Date')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD Modified_Date DATETIME NOT NULL CONSTRAINT DF_MetadataRef_ModifiedDate DEFAULT (GETDATE());
-    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('EDP_Metadata.MetadataRef') AND name = 'Modified_By')
-        ALTER TABLE EDP_Metadata.MetadataRef ADD Modified_By NVARCHAR(100) NOT NULL CONSTRAINT DF_MetadataRef_ModifiedBy DEFAULT (SYSTEM_USER);
-END
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_InputDataset] FOREIGN KEY([InputDataset_ID])
+REFERENCES [EDP_Metadata].[DatasetRef] ([Dataset_ID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_InputDataset]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_InputLS] FOREIGN KEY([InputLinkedServiceConnectionID])
+REFERENCES [EDP_Metadata].[LinkedServiceRef] ([LinkedService_ID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_InputLS]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_OutputColDelimiter] FOREIGN KEY([Output_colDelRefID])
+REFERENCES [EDP_Metadata].[colDelimitterRef] ([colDelRefID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_OutputColDelimiter]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_OutputDataset] FOREIGN KEY([OutputDataset_ID])
+REFERENCES [EDP_Metadata].[DatasetRef] ([Dataset_ID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_OutputDataset]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_OutputLS] FOREIGN KEY([OutputLinkedServiceConnectionID])
+REFERENCES [EDP_Metadata].[LinkedServiceRef] ([LinkedService_ID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_OutputLS]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [FK_MetadataRef_Watermark] FOREIGN KEY([Watermark_ID])
+REFERENCES [EDP_Metadata].[Watermark] ([Watermark_ID])
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [FK_MetadataRef_Watermark]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [CK_MetadataRef_ActivityType] CHECK  (([ActivityType]=(1) OR [ActivityType]=(0)))
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [CK_MetadataRef_ActivityType]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [CK_MetadataRef_IsActive] CHECK  (([IsActive]=(1) OR [IsActive]=(0)))
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [CK_MetadataRef_IsActive]
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef]  WITH CHECK ADD  CONSTRAINT [CK_MetadataRef_LoadType] CHECK  (([Load_Type]=(1) OR [Load_Type]=(0)))
+GO
+
+ALTER TABLE [EDP_Metadata].[MetadataRef] CHECK CONSTRAINT [CK_MetadataRef_LoadType]
+GO
+
+
