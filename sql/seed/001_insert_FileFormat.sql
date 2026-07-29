@@ -21,7 +21,8 @@ FROM (
         ('Delta'),
         ('DelimitedText'),
         ('Zip'),
-        ('Tar')
+        ('Tar'),
+		('Table')
 ) AS v(Format)
 WHERE NOT EXISTS (
     SELECT 1
