@@ -22,6 +22,23 @@ SELECT
     -- ── Job identity ─────────────────────────────────────────────
     m.Metadata_ID,
     m.Metadata_Job,
+	
+	-- ── Pipeline Name ─────────────────────────────────────────────
+	'PL_' 
+	+ UPPER(src_in.Source_Ref) 
+	+ '_' 
+	+ UPPER(src_out.Source_Ref) 
+	+ '_' 
+	+ CASE m.Load_Type  
+		  WHEN 0 THEN 'FULL'  
+		  WHEN 1 THEN 'Delta'  
+	  END
+	+ '_' 
+	+ CASE m.ActivityType  
+		  WHEN 0 THEN 'INGRESS'  
+		  WHEN 1 THEN 'EGRESS'  
+	  END AS Pipeline_Name,
+
 
     -- ── Business domain ───────────────────────────────────────────
     bd.Business_Domain_Name,
@@ -35,26 +52,44 @@ SELECT
     src_in.Source                            AS InputSource,
     src_in.Source_Ref                        AS InputSourceRef,
     ff_in.Format                             AS InputFileFormat,
+	
+	-- ── Input: Delimitter ───────────────────────────────────────
+	cd_in.colDelRefValue                        AS InputColDelimitter,
 
     -- ── Input: linked service (connection) ────────────────────────
     ls_in.LinkedServiceName                  AS InputLinkedServiceName,
     ls_in.LinkedServiceConnectionName        AS InputLinkedServiceConnectionName,
     ls_in.LinkedServiceConnectionString      AS InputLinkedServiceConnectionString,
+	
+	-- ── Input Runtime parameters (JSON) ─────────────────────────────────
+	m.MetadataSettingsInput,
 
     -- ── Output: dataset type ──────────────────────────────────────
     ds_out.Dataset_Name                      AS OutputDatasetName,
     src_out.Source                           AS OutputSource,
     src_out.Source_Ref                       AS OutputSourceRef,
     ff_out.Format                            AS OutputFileFormat,
+	
+	-- ── Output: Delimitter ───────────────────────────────────────
+	cd_out.colDelRefValue                        AS OutputColDelimitter,
 
     -- ── Output: linked service (connection) ───────────────────────
     ls_out.LinkedServiceName                 AS OutputLinkedServiceName,
     ls_out.LinkedServiceConnectionName       AS OutputLinkedServiceConnectionName,
     ls_out.LinkedServiceConnectionString     AS OutputLinkedServiceConnectionString,
 
-    -- ── Runtime parameters (JSON) ─────────────────────────────────
-    m.MetadataSettingsInput,
+    -- ── Output Runtime parameters (JSON) ─────────────────────────────────
     m.MetadataSettingsOutput,
+	
+	-- ── Switch case Reference─────────────────────────────────
+	'SW_' 
+	+ RIGHT(ls_in.LinkedServiceName, LEN(ls_in.LinkedServiceName) - 3) 
+	+ '_' 
+	+ UPPER(ff_in.Format) 
+	+ '_' 
+	+ RIGHT(ls_out.LinkedServiceName, LEN(ls_out.LinkedServiceName) - 3) 
+	+ '_' + UPPER(ff_out.Format) AS SwitchCaseRef,  
+
 
     -- ── Decoded flags ─────────────────────────────────────────────
     CASE m.ActivityType
@@ -68,7 +103,7 @@ SELECT
     END                                      AS IsActive,
 
     CASE m.Load_Type
-        WHEN 0 THEN 'Full Refresh'
+        WHEN 0 THEN 'Full_Refresh'
         WHEN 1 THEN 'Incremental'
     END                                      AS Load_Type,
 
@@ -93,6 +128,8 @@ LEFT JOIN  EDP_Metadata.SourceRef          src_in
         ON src_in.Source_ID                = ds_in.Source_ID
 LEFT JOIN  EDP_Metadata.FileFormat         ff_in
         ON ff_in.FileFormat_ID             = ds_in.FileFormat_ID
+LEFT JOIN EDP_Metadata.colDelimitterRef    cd_in
+		ON cd_in.colDelRefID			   = m.Input_colDelRefID
 
 -- Input linked service (from MetadataRef directly)
 LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_in
@@ -105,6 +142,8 @@ LEFT JOIN  EDP_Metadata.SourceRef          src_out
         ON src_out.Source_ID               = ds_out.Source_ID
 LEFT JOIN  EDP_Metadata.FileFormat         ff_out
         ON ff_out.FileFormat_ID            = ds_out.FileFormat_ID
+LEFT JOIN EDP_Metadata.colDelimitterRef    cd_out
+		ON cd_out.colDelRefID			   = m.Output_colDelRefID
 
 -- Output linked service (from MetadataRef directly)
 LEFT JOIN  EDP_Metadata.LinkedServiceRef   ls_out
