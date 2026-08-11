@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metadata-Driven Ingestion Framework — High Level Design</title>
+<style>
+/* ── Tokens: Light (default) ──────────────────────────────── */
+:root {
+  --bg:          #F3F6FB;
+  --surface:     #FFFFFF;
+  --surface-2:   #EBF0F8;
+  --border:      #C8D4E6;
+  --text:        #1B2238;
+  --text-2:      #48567080;
+  --text-2s:     #485670;
+  --label:       #6A788F;
+  --accent:      #0B68B0;
+  --accent-bg:   #E3EFF9;
+  --ok-bg:       #E6F6EE;
+  --ok-text:     #166534;
+  --warn-bg:     #FFF7E0;
+  --warn-text:   #854D0E;
+  --tag-bg:      #EDF2FF;
+  --tag-text:    #3145A6;
+  --shadow:      0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+  --mono:        'Cascadia Code','Consolas','Courier New',monospace;
+}
+
+/* ── Tokens: Dark (system preference) ────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #090E18;
+    --surface:     #101827;
+    --surface-2:   #141F30;
+    --border:      #1E2B3F;
+    --text:        #DCE4F3;
+    --text-2:      #7A8BAA80;
+    --text-2s:     #7A8BAA;
+    --label:       #596880;
+    --accent:      #4BA2E2;
+    --accent-bg:   #0C1E33;
+    --ok-bg:       #052D1A;
+    --ok-text:     #4ADE80;
+    --warn-bg:     #231500;
+    --warn-text:   #FACC15;
+    --tag-bg:      #131E3B;
+    --tag-text:    #93B4F8;
+    --shadow:      0 1px 4px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.3);
+  }
+}
+
+/* ── Tokens: Dark (explicit toggle) ──────────────────────── */
+:root[data-theme="dark"] {
+  --bg:          #090E18;
+  --surface:     #101827;
+  --surface-2:   #141F30;
+  --border:      #1E2B3F;
+  --text:        #DCE4F3;
+  --text-2:      #7A8BAA80;
+  --text-2s:     #7A8BAA;
+  --label:       #596880;
+  --accent:      #4BA2E2;
+  --accent-bg:   #0C1E33;
+  --ok-bg:       #052D1A;
+  --ok-text:     #4ADE80;
+  --warn-bg:     #231500;
+  --warn-text:   #FACC15;
+  --tag-bg:      #131E3B;
+  --tag-text:    #93B4F8;
+  --shadow:      0 1px 4px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.3);
+}
+
+/* ── Reset ────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;
+  line-height:1.65;
+  min-height:100vh;
+}
+
+/* ── Outer wrapper ────────────────────────────────────────── */
+.layout{
+  display:grid;
+  grid-template-columns:210px 1fr;
+  max-width:1080px;
+  margin:0 auto;
+  padding:0 1.5rem;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sidebar{
+  position:sticky;
+  top:2rem;
+  align-self:start;
+  padding:2.5rem 1.25rem 2.5rem 0;
+}
+.sidebar nav{display:flex;flex-direction:column;gap:.2rem}
+.nav-group{
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--label);
+  padding:.75rem 0 .25rem;
+}
+.sidebar a{
+  font-size:.82rem;
+  color:var(--text-2s);
+  text-decoration:none;
+  padding:.28rem .6rem;
+  border-radius:4px;
+  transition:background .12s,color .12s;
+  display:block;
+}
+.sidebar a:hover{background:var(--accent-bg);color:var(--accent)}
+
+/* ── Main content ─────────────────────────────────────────── */
+.content{
+  padding:2.5rem 0 5rem 2.75rem;
+  border-left:1px solid var(--border);
+  min-width:0;
+}
+
+/* ── Doc header ───────────────────────────────────────────── */
+.doc-header{
+  margin-bottom:3rem;
+  padding-bottom:2rem;
+  border-bottom:1px solid var(--border);
+}
+.eyebrow{
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:.65rem;
+}
+.doc-header h1{
+  font-size:1.9rem;
+  font-weight:700;
+  line-height:1.2;
+  text-wrap:balance;
+  margin-bottom:.6rem;
+}
+.doc-subtitle{
+  font-size:.97rem;
+  color:var(--text-2s);
+  max-width:58ch;
+  margin-bottom:1.25rem;
+}
+.doc-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:1.25rem;
+  font-size:.78rem;
+  color:var(--label);
+}
+
+/* ── Section ──────────────────────────────────────────────── */
+section{margin-bottom:3.25rem}
+.section-label{
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:.45rem;
+}
+h2{
+  font-size:1.38rem;
+  font-weight:700;
+  text-wrap:balance;
+  margin-bottom:.9rem;
+  padding-bottom:.55rem;
+  border-bottom:2px solid var(--accent-bg);
+}
+h3{font-size:1rem;font-weight:600;margin:1.5rem 0 .45rem;color:var(--text)}
+p{color:var(--text-2s);margin-bottom:.7rem;max-width:66ch}
+ul,ol{color:var(--text-2s);padding-left:1.4rem;margin-bottom:.75rem}
+li{margin-bottom:.3rem}
+strong{color:var(--text);font-weight:600}
+
+/* ── Callout ──────────────────────────────────────────────── */
+.callout{
+  background:var(--accent-bg);
+  border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0;
+  padding:.85rem 1.1rem;
+  margin:1rem 0;
+  font-size:.875rem;
+  color:var(--text-2s);
+}
+.callout.warn{
+  background:var(--warn-bg);
+  border-color:var(--warn-text);
+  color:var(--warn-text);
+}
+
+/* ── Badge ────────────────────────────────────────────────── */
+.badge{
+  display:inline-block;
+  padding:.13rem .48rem;
+  border-radius:4px;
+  font-size:.72rem;
+  font-weight:600;
+  background:var(--tag-bg);
+  color:var(--tag-text);
+  white-space:nowrap;
+}
+.badge.ok{background:var(--ok-bg);color:var(--ok-text)}
+.badge.warn{background:var(--warn-bg);color:var(--warn-text)}
+.badge.accent{background:var(--accent-bg);color:var(--accent)}
+
+/* ── Tables ───────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto;margin-bottom:1.25rem;border-radius:7px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.855rem}
+thead th{
+  background:var(--surface-2);
+  color:var(--label);
+  font-size:.7rem;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  padding:.6rem 1rem;
+  text-align:left;
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+tbody td{
+  padding:.58rem 1rem;
+  color:var(--text-2s);
+  border-bottom:1px solid var(--border);
+  vertical-align:top;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface-2)}
+td strong{color:var(--text)}
+td code,th code{
+  font-family:var(--mono);
+  font-size:.79rem;
+  background:var(--surface-2);
+  padding:.1em .35em;
+  border-radius:3px;
+  color:var(--accent);
+}
+
+/* ── Architecture diagram ─────────────────────────────────── */
+.arch-diagram{
+  margin:1.5rem 0;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  max-width:640px;
+}
+.arch-box{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  padding:.9rem 1.1rem;
+  box-shadow:var(--shadow);
+}
+.arch-box.highlighted{
+  border-color:var(--accent);
+  background:var(--accent-bg);
+}
+.arch-box.meta{
+  border-color:var(--border);
+  border-style:dashed;
+  background:var(--surface-2);
+}
+.arch-box-label{
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--label);
+  margin-bottom:.4rem;
+}
+.arch-box.highlighted .arch-box-label{color:var(--accent)}
+.arch-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem}
+.arch-connector{
+  text-align:center;
+  padding:.3rem 0;
+  color:var(--label);
+  font-size:1.1rem;
+}
+.arch-steps{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
+.arch-step{display:flex;gap:.55rem;font-size:.84rem;color:var(--text-2s);align-items:flex-start}
+.step-num{
+  width:1.3rem;height:1.3rem;border-radius:50%;
+  background:var(--accent);color:#fff;
+  font-size:.65rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:.15rem;
+}
+
+/* ── Flow steps ───────────────────────────────────────────── */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:1rem 0}
+.flow-step{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:.45rem .75rem;
+  font-size:.8rem;
+  color:var(--text-2s);
+  text-align:center;
+}
+.flow-arrow{color:var(--label);font-size:.9rem}
+
+/* ── Principles grid ──────────────────────────────────────── */
+.principles-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+  gap:.9rem;
+  margin-top:1rem;
+}
+.principle-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:.95rem 1.05rem;
+  box-shadow:var(--shadow);
+}
+.principle-title{
+  font-size:.88rem;
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:.35rem;
+  display:flex;align-items:center;gap:.45rem;
+}
+.principle-title::before{
+  content:'';display:inline-block;
+  width:3px;height:1em;
+  background:var(--accent);border-radius:2px;
+  flex-shrink:0;
+}
+.principle-card p{font-size:.83rem;max-width:none;margin-bottom:0}
+
+/* ── Benefits grid ────────────────────────────────────────── */
+.benefits-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+  gap:.7rem;margin-top:.75rem;
+}
+.benefit-item{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:.65rem .9rem;
+  font-size:.83rem;
+  color:var(--text-2s);
+  display:flex;gap:.5rem;align-items:flex-start;
+}
+.benefit-item::before{
+  content:'✓';
+  color:var(--ok-text);
+  font-weight:700;flex-shrink:0;
+}
+
+/* ── Code block ───────────────────────────────────────────── */
+.code-block{
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:.8rem 1rem;
+  font-family:var(--mono);
+  font-size:.8rem;
+  color:var(--text-2s);
+  overflow-x:auto;
+  white-space:pre;
+  margin:.75rem 0;
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+.doc-footer{
+  margin-top:4rem;
+  padding-top:1.5rem;
+  border-top:1px solid var(--border);
+  font-size:.78rem;
+  color:var(--label);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media(max-width:680px){
+  .layout{grid-template-columns:1fr;padding:0 1rem}
+  .sidebar{position:static;padding:1.5rem 0 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+  .content{padding:1.5rem 0 3rem;border-left:none}
+  .principles-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar navigation ────────────────────────────────── -->
+  <aside class="sidebar">
+    <nav aria-label="Document sections">
+      <div class="nav-group">Overview</div>
+      <a href="#summary">Executive Summary</a>
+      <a href="#problem">Problem Statement</a>
+
+      <div class="nav-group">Architecture</div>
+      <a href="#architecture">Solution Architecture</a>
+      <a href="#schema">Metadata Schema</a>
+      <a href="#runtime">Runtime Execution</a>
+
+      <div class="nav-group">Patterns</div>
+      <a href="#load-patterns">Load Patterns</a>
+      <a href="#naming">Naming Conventions</a>
+
+      <div class="nav-group">Principles</div>
+      <a href="#design-principles">Design Principles</a>
+      <a href="#data-fabric">Data Fabric Alignment</a>
+      <a href="#benefits">Benefits</a>
+
+      <div class="nav-group">Reference</div>
+      <a href="#appendix">Schema Quick Reference</a>
+    </nav>
+  </aside>
+
+  <!-- ── Main content ───────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Doc header -->
+    <div class="doc-header">
+      <div class="eyebrow">Architecture Forum — High Level Design</div>
+      <h1>Metadata-Driven Ingestion Framework</h1>
+      <p class="doc-subtitle">A reusable, configuration-controlled data integration layer on Azure that eliminates per-source pipeline development and centralises all ingestion behaviour in a single metadata control plane.</p>
+      <div class="doc-meta">
+        <span>Version 1.0</span>
+        <span>August 2026</span>
+        <span>Classification: Internal</span>
+      </div>
+    </div>
+
+    <!-- ── 01 Executive Summary ──────────────────────────────── -->
+    <section id="summary">
+      <div class="section-label">01 — Overview</div>
+      <h2>Executive Summary</h2>
+      <p>The Metadata-Driven Ingestion Framework provides a single, reusable, and centrally governed data integration layer on Azure. Instead of building a dedicated pipeline for each data source, a suite of generic Azure Data Factory pipelines covers all ingestion scenarios — with runtime behaviour driven entirely by metadata stored in a central Azure SQL schema (<code>EDP_Metadata</code>).</p>
+      <p>Onboarding a new data source requires no pipeline development or deployment. A metadata record is inserted into the control table and the existing generic pipeline automatically handles the ingestion — resolving connections, dataset types, file formats, column delimiters, load strategy, and target paths at runtime from the metadata.</p>
+      <p>The framework supports both <strong>Full Refresh</strong> and <strong>Incremental (Delta)</strong> load patterns, Ingress and Egress activity directions, and a broad range of source and target connectors across file-based and database systems.</p>
+    </section>
+
+    <!-- ── 02 Problem Statement ──────────────────────────────── -->
+    <section id="problem">
+      <div class="section-label">02 — Context</div>
+      <h2>Problem Statement</h2>
+      <p>Without a metadata-driven approach, data engineering teams typically encounter the following challenges as the number of ingestion requirements grows:</p>
+      <ul>
+        <li><strong>Pipeline proliferation</strong> — A dedicated pipeline per source/target combination results in hundreds of near-identical, independently maintained artifacts with no shared behaviour.</li>
+        <li><strong>Hardcoded configuration</strong> — Connection strings, file paths, table names, and schema references are embedded in pipeline definitions, requiring a full redeployment cycle for any configuration change.</li>
+        <li><strong>No central control</strong> — Activating or deactivating a specific ingestion job requires modifying triggers or pipeline definitions rather than updating a flag in a control table.</li>
+        <li><strong>Slow source onboarding</strong> — Each new data source demands a full pipeline build, review, test, and deployment cycle — typically days to weeks per source at scale.</li>
+        <li><strong>Inconsistency</strong> — Without enforced naming and structural conventions, pipeline implementations diverge across teams and projects, making operational management and tooling difficult.</li>
+        <li><strong>Ad hoc watermark management</strong> — Incremental load tracking (high-water marks) is typically implemented per-pipeline, with no centralised state or visibility.</li>
+        <li><strong>Poor auditability</strong> — There is no structured record of who configured a given ingestion job, when, or what was changed.</li>
+      </ul>
+    </section>
+
+    <!-- ── 03 Solution Architecture ─────────────────────────── -->
+    <section id="architecture">
+      <div class="section-label">03 — Solution</div>
+      <h2>Solution Architecture</h2>
+      <p>The framework is structured across three distinct layers, each with a single responsibility. The metadata control plane drives all behaviour; ADF executes it; source and target systems are treated as interchangeable connectors.</p>
+
+      <div class="arch-diagram">
+
+        <div class="arch-box">
+          <div class="arch-box-label">Source Systems</div>
+          <div class="arch-chips">
+            <span class="badge">ADLS Gen2</span>
+            <span class="badge">Azure SQL</span>
+            <span class="badge">SFTP</span>
+            <span class="badge">Oracle</span>
+            <span class="badge">MySQL</span>
+            <span class="badge">Others</span>
+          </div>
+        </div>
+
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-box highlighted">
+          <div class="arch-box-label">Azure Data Factory — Orchestration Layer</div>
+          <div class="arch-steps">
+            <div class="arch-step">
+              <div class="step-num">1</div>
+              <div><strong>Lookup</strong> — Queries <code>EDP_Metadata.MasterRef</code> view; resolves the complete runtime configuration for the job in a single call</div>
+            </div>
+            <div class="arch-step">
+              <div class="step-num">2</div>
+              <div><strong>Switch</strong> — Evaluates <code>SwitchCaseRef</code> to route to the correct Copy activity for the source/target/format combination</div>
+            </div>
+            <div class="arch-step">
+              <div class="step-num">3</div>
+              <div><strong>Copy</strong> — Executes with fully dynamic expressions; all paths, queries, and connection details resolved from <code>MetadataSettingsInput</code> / <code>MetadataSettingsOutput</code> JSON at runtime</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-box">
+          <div class="arch-box-label">Target Systems</div>
+          <div class="arch-chips">
+            <span class="badge">ADLS Gen2</span>
+            <span class="badge">Azure SQL</span>
+            <span class="badge">Others</span>
+          </div>
+        </div>
+
+        <div class="arch-connector">↕</div>
+
+        <div class="arch-box meta">
+          <div class="arch-box-label">Metadata Control Plane — Azure SQL &nbsp;·&nbsp; EDP_Metadata Schema</div>
+          <div class="arch-chips">
+            <span class="badge accent">MetadataRef</span>
+            <span class="badge">MasterRef (view)</span>
+            <span class="badge">DatasetRef</span>
+            <span class="badge">LinkedServiceRef</span>
+            <span class="badge">Watermark</span>
+            <span class="badge">BusinessDomainRef</span>
+            <span class="badge">SourceRef</span>
+            <span class="badge">FileFormat</span>
+            <span class="badge">SystemAuth</span>
+            <span class="badge">colDelimitterRef</span>
+          </div>
+          <p style="margin-top:.6rem;font-size:.8rem;color:var(--label);margin-bottom:0">All ADF pipeline behaviour is driven from this schema. No configuration is hardcoded in pipeline definitions.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 04 Metadata Schema ─────────────────────────────────── -->
+    <section id="schema">
+      <div class="section-label">04 — Metadata Layer</div>
+      <h2>Metadata Schema</h2>
+      <p>All framework configuration lives in the <code>EDP_Metadata</code> schema. It consists of a core control table (<code>MetadataRef</code>), a set of normalised lookup tables, and a denormalized runtime view (<code>MasterRef</code>) that ADF queries at pipeline execution time.</p>
+
+      <h3>Core Control Table — MetadataRef</h3>
+      <p>Each row in <code>MetadataRef</code> represents one ingestion job and carries all the parameters required by ADF at runtime.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>Metadata_ID</code></td><td>INT IDENTITY</td><td>Primary key</td></tr>
+            <tr><td><code>Metadata_Job</code></td><td>NVARCHAR(200) UNIQUE</td><td>Unique job name — passed as a trigger parameter to identify the job at runtime</td></tr>
+            <tr><td><code>Business_Domain_ID</code></td><td>INT (FK)</td><td>Classifies the job by business function; references <code>BusinessDomainRef</code></td></tr>
+            <tr><td><code>ADF_Name</code></td><td>NVARCHAR(100)</td><td>Name of the ADF instance this job belongs to</td></tr>
+            <tr><td><code>Trigger_Name</code></td><td>NVARCHAR(200)</td><td>ADF trigger name associated with this job</td></tr>
+            <tr><td><code>InputDataset_ID</code></td><td>INT (FK)</td><td>Source dataset type; references <code>DatasetRef</code></td></tr>
+            <tr><td><code>OutputDataset_ID</code></td><td>INT (FK)</td><td>Target dataset type; references <code>DatasetRef</code></td></tr>
+            <tr><td><code>Input_colDelRefID</code></td><td>INT (FK)</td><td>Source column delimiter; references <code>colDelimitterRef</code></td></tr>
+            <tr><td><code>Output_colDelRefID</code></td><td>INT (FK)</td><td>Target column delimiter; references <code>colDelimitterRef</code></td></tr>
+            <tr><td><code>InputLinkedServiceConnectionID</code></td><td>INT (FK)</td><td>Source connection; references <code>LinkedServiceRef</code></td></tr>
+            <tr><td><code>OutputLinkedServiceConnectionID</code></td><td>INT (FK)</td><td>Target connection; references <code>LinkedServiceRef</code></td></tr>
+            <tr><td><code>MetadataSettingsInput</code></td><td>NVARCHAR(MAX) JSON</td><td>Runtime source parameters — container, directory path, filename, SQL query, schema, table, server, etc.</td></tr>
+            <tr><td><code>MetadataSettingsOutput</code></td><td>NVARCHAR(MAX) JSON</td><td>Runtime target parameters — container, directory, filename, schema, table, etc.</td></tr>
+            <tr><td><code>ActivityType</code></td><td>BIT</td><td><span class="badge">0 = Ingress</span>&nbsp; <span class="badge accent">1 = Egress</span></td></tr>
+            <tr><td><code>IsActive</code></td><td>BIT</td><td><span class="badge ok">1 = Active</span>&nbsp; <span class="badge warn">0 = Inactive</span> — master on/off switch for any job</td></tr>
+            <tr><td><code>Load_Type</code></td><td>BIT</td><td><span class="badge">0 = Full Refresh</span>&nbsp; <span class="badge accent">1 = Incremental</span></td></tr>
+            <tr><td><code>Watermark_ID</code></td><td>INT (FK, nullable)</td><td>NULL for Full Refresh; references <code>Watermark</code> table for Incremental jobs</td></tr>
+            <tr><td><code>Created_Date</code></td><td>DATETIME</td><td>Auto-set on insert via default constraint</td></tr>
+            <tr><td><code>Modified_Date</code></td><td>DATETIME</td><td>Tracks last modification timestamp</td></tr>
+            <tr><td><code>Modified_By</code></td><td>NVARCHAR(100)</td><td>Captures the database user who last modified the row; auto-set via <code>SUSER_SNAME()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Runtime View — MasterRef</h3>
+      <p><code>EDP_Metadata.MasterRef</code> is a denormalized view that joins <code>MetadataRef</code> with all its lookup tables. The ADF Lookup activity targets this view to retrieve the complete runtime configuration for a given <code>Metadata_Job</code> in a single query. The view also derives two computed values:</p>
+      <ul>
+        <li><strong>Pipeline_Name</strong> — Derived from input source reference, output source reference, load type, and activity direction. Format: <code>PL_{InputSource}_{OutputSource}_{FULL|Delta}_{INGRESS|EGRESS}</code></li>
+        <li><strong>SwitchCaseRef</strong> — Derived from the input and output linked service names and file formats. Used by the ADF Switch activity to select the correct Copy activity for the connector/format combination.</li>
+      </ul>
+
+      <h3>Lookup Tables</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Table</th><th>Purpose</th><th>Key Columns</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SourceRef</strong></td>
+              <td>Registry of all supported data source types. <code>Source_Ref</code> is the short code used in naming conventions.</td>
+              <td><code>Source</code>, <code>Source_Ref</code></td>
+            </tr>
+            <tr>
+              <td><strong>FileFormat</strong></td>
+              <td>Lookup of all supported file formats (e.g. CSV, Parquet, ZIP). Not applicable to table-based sources such as Azure SQL, Oracle, or MySQL — those use a TABLE suffix.</td>
+              <td><code>Format</code></td>
+            </tr>
+            <tr>
+              <td><strong>DatasetRef</strong></td>
+              <td>Unique Source + FileFormat combinations that define available ADF dataset types. Named <code>DS_{Source_Ref}_{Format}</code>. <code>FileFormat_ID</code> is NULL for database sources where file format does not apply.</td>
+              <td><code>Dataset_Name</code>, <code>Source_ID</code>, <code>FileFormat_ID</code></td>
+            </tr>
+            <tr>
+              <td><strong>LinkedServiceRef</strong></td>
+              <td>Catalogue of all ADF linked services defined as valid Source × Authentication combinations. Connection strings are stored as JSON templates; runtime values are supplied dynamically. Named <code>LS_{Source_Ref}_{Auth_Ref}</code>.</td>
+              <td><code>LinkedServiceName</code>, <code>LinkedServiceConnectionString</code>, <code>Source_ID</code>, <code>Auth_ID</code></td>
+            </tr>
+            <tr>
+              <td><strong>SystemAuth</strong></td>
+              <td>Registry of all supported authentication types for ADF linked services. The <code>Connectors</code> column records which source types each authentication method applies to.</td>
+              <td><code>Authentication_Type</code>, <code>Auth_Ref</code>, <code>Connectors</code></td>
+            </tr>
+            <tr>
+              <td><strong>BusinessDomainRef</strong></td>
+              <td>Lookup of business domains. Every ingestion job is classified by its owning business function, supporting domain-aware governance and lineage.</td>
+              <td><code>Business_Domain_Name</code></td>
+            </tr>
+            <tr>
+              <td><strong>colDelimitterRef</strong></td>
+              <td>Column delimiter reference for file-based sources and targets. Seeded values: Comma, Semicolon, Pipe, Tab, Start of Heading, No Delimiter.</td>
+              <td><code>colDelRefName</code>, <code>colDelRefValue</code></td>
+            </tr>
+            <tr>
+              <td><strong>Watermark</strong></td>
+              <td>Stores the high-water mark for each incremental ingestion job. <code>Watermark_Value</code> (DATETIME) is updated after each successful incremental run. <code>Watermark_Column</code> identifies the source column used to filter new records.</td>
+              <td><code>Watermark_Value</code>, <code>Watermark_Column</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── 05 Runtime Execution ──────────────────────────────── -->
+    <section id="runtime">
+      <div class="section-label">05 — Execution Model</div>
+      <h2>Runtime Execution Model</h2>
+      <p>At runtime, ADF resolves all parameters from the metadata control plane. No configuration is embedded in the pipeline definition. The execution sequence for any ingestion job is identical regardless of source, target, or load pattern:</p>
+      <ol>
+        <li>A <strong>scheduled or event-based trigger</strong> fires in Azure Data Factory, passing the <code>Metadata_Job</code> name as a pipeline parameter.</li>
+        <li>A <strong>Lookup activity</strong> queries <code>EDP_Metadata.MasterRef</code>, returning the complete runtime configuration — source and target connections, dataset types, file formats, column delimiters, load type, watermark state, and JSON runtime settings — in a single row.</li>
+        <li>A <strong>Switch activity</strong> evaluates the <code>SwitchCaseRef</code> value from the Lookup result to route execution to the correct Copy activity for the connector and file format combination.</li>
+        <li>The <strong>Copy activity</strong> executes using fully dynamic ADF expressions. Container names, directory paths, filenames, SQL queries, schema and table names are all sourced from <code>MetadataSettingsInput</code> and <code>MetadataSettingsOutput</code> JSON at runtime — nothing is hardcoded in the pipeline definition.</li>
+        <li>For <strong>Incremental</strong> jobs: <code>Watermark_Column</code> and the current <code>Watermark_Value</code> are applied as a source-side filter. On successful completion, <code>Watermark_Value</code> is updated to the current high-water mark.</li>
+      </ol>
+    </section>
+
+    <!-- ── 06 Load Patterns ──────────────────────────────────── -->
+    <section id="load-patterns">
+      <div class="section-label">06 — Load Patterns</div>
+      <h2>Load Patterns</h2>
+      <p>The framework supports two load patterns, controlled by the <code>Load_Type</code> flag on <code>MetadataRef</code>. Both patterns flow through the same generic ADF pipeline — the metadata determines the behaviour.</p>
+
+      <h3>Full Refresh &nbsp;<span class="badge" style="vertical-align:middle">Load_Type = 0</span></h3>
+      <p>The entire dataset is read from source and written to the target on each run. Used for reference data, small dimension tables, or sources where change tracking is not available or required.</p>
+      <ul>
+        <li><code>Watermark_ID</code> is <code>NULL</code> — no high-water mark is maintained.</li>
+        <li>No source-side filter is applied; all records are copied on every run.</li>
+        <li>Pipeline name carries the <code>FULL</code> suffix.</li>
+      </ul>
+      <div class="flow">
+        <div class="flow-step">Trigger fires</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Lookup MasterRef</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Switch on SwitchCaseRef</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Copy all rows</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Target refreshed</div>
+      </div>
+
+      <h3>Incremental / Delta &nbsp;<span class="badge accent" style="vertical-align:middle">Load_Type = 1</span></h3>
+      <p>Only records added or changed since the last successful run are copied. The high-water mark is maintained in the <code>Watermark</code> table and updated after each successful load. Suited to large transactional datasets where a full reload on each run is not practical.</p>
+      <ul>
+        <li><code>Watermark_ID</code> references a row in the <code>Watermark</code> table.</li>
+        <li><code>Watermark_Column</code> identifies the datetime column used to filter new records at the source.</li>
+        <li><code>Watermark_Value</code> holds the last successfully loaded datetime boundary.</li>
+        <li>Source query is filtered: records where <code>{Watermark_Column} &gt; {last Watermark_Value}</code> are retrieved.</li>
+        <li>After a successful copy, <code>Watermark_Value</code> is updated to the current boundary.</li>
+        <li>Pipeline name carries the <code>Delta</code> suffix.</li>
+      </ul>
+      <div class="flow">
+        <div class="flow-step">Trigger fires</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Lookup MasterRef + Watermark</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Filter source by Watermark</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Copy delta rows</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Update Watermark_Value</div>
+      </div>
+
+      <div class="callout warn">
+        <strong>Note:</strong> The Watermark tracking infrastructure — the <code>Watermark</code> table, its foreign key to <code>MetadataRef</code>, and the <code>Watermark_Value</code> / <code>Watermark_Column</code> columns exposed by the <code>MasterRef</code> view — is fully in place. Incremental pipeline execution logic is designed and pipeline implementation is in progress.
+      </div>
+
+      <h3>Activity Direction</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ActivityType</th><th>Direction</th><th>Typical Use</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge">0 — Ingress</span></td>
+              <td>Source system → Data platform</td>
+              <td>Pulling data from source systems into the landing or staging zone</td>
+            </tr>
+            <tr>
+              <td><span class="badge accent">1 — Egress</span></td>
+              <td>Data platform → Consumer</td>
+              <td>Pushing processed data from the platform to downstream consumers or targets</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── 07 Naming Conventions ─────────────────────────────── -->
+    <section id="naming">
+      <div class="section-label">07 — Conventions</div>
+      <h2>Naming Conventions</h2>
+      <p>All ADF artifact names are derived from metadata, not manually assigned. The <code>MasterRef</code> view computes pipeline names and switch case references at runtime from the source, target, load type, and connector combination registered in the reference tables.</p>
+
+      <h3>Pipeline Name</h3>
+      <div class="code-block">PL_{InputSource}_{OutputSource}_{FULL|Delta}_{INGRESS|EGRESS}
+
+Examples:
+  PL_ADLS_ADLS_FULL_INGRESS      Full refresh, ADLS Gen2 source to ADLS Gen2 target
+  PL_ASQL_ADLS_Delta_INGRESS     Incremental, Azure SQL source to ADLS Gen2 target
+  PL_SFTP_ADLS_FULL_INGRESS      Full refresh, SFTP source to ADLS Gen2 target</div>
+
+      <h3>Dataset Name</h3>
+      <div class="code-block">DS_{Source_Ref}_{Format}
+
+Examples:
+  DS_ADLS_PARQUET    ADLS Gen2 with Parquet format
+  DS_ADLS_CSV        ADLS Gen2 with CSV format
+  DS_ASQL_TABLE      Azure SQL — table-based, no file format
+  DS_SFTP_ZIP        SFTP with ZIP format</div>
+
+      <h3>Linked Service Name</h3>
+      <div class="code-block">LS_{Source_Ref}_{Auth_Ref}
+
+Examples:
+  LS_ADLS_SAMI       ADLS Gen2 with System-Assigned Managed Identity
+  LS_ASQL_SAMI       Azure SQL with System-Assigned Managed Identity
+  LS_SFTP_BASIC      SFTP with Basic (username / password) authentication</div>
+
+      <h3>Switch Case Reference</h3>
+      <div class="code-block">SW_{InputLinkedService}_{InputFormat}_{OutputLinkedService}_{OutputFormat}
+
+Computed by MasterRef to uniquely identify each source/target/format combination.
+Used by the ADF Switch activity to route to the correct Copy activity.</div>
+    </section>
+
+    <!-- ── 08 Design Principles ──────────────────────────────── -->
+    <section id="design-principles">
+      <div class="section-label">08 — Design</div>
+      <h2>Design Principles</h2>
+
+      <div class="principles-grid">
+        <div class="principle-card">
+          <div class="principle-title">Metadata-Driven Architecture</div>
+          <p>Pipeline behaviour is fully parameterized. No source path, connection detail, file format, or load type is hardcoded in any ADF pipeline definition. All execution decisions are resolved at runtime from the metadata control plane.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Separation of Configuration from Execution</div>
+          <p>The metadata layer owns <em>what</em> to do; ADF owns <em>how</em> to do it. Operational and configuration changes require no pipeline modification or redeployment — they are made purely in the metadata.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Single Source of Truth</div>
+          <p>All ingestion configuration lives in <code>EDP_Metadata.MetadataRef</code>. No configuration is duplicated across pipelines, environments, or teams. The <code>MasterRef</code> view exposes a complete denormalized runtime view over this single source.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Centralised Operational Control</div>
+          <p>The <code>IsActive</code> flag provides a master on/off switch for any ingestion job without touching ADF triggers or pipeline definitions. Operational state is managed in data, not in infrastructure.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Convention over Configuration</div>
+          <p>Strict, computed naming conventions for pipelines, datasets, linked services, and switch cases are enforced by the metadata schema. Consistent naming reduces cognitive load and enables automated operational tooling.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Auditability by Design</div>
+          <p>Every row in <code>MetadataRef</code> carries <code>Created_Date</code>, <code>Modified_Date</code>, and <code>Modified_By</code> — populated automatically by database defaults. Configuration change history is inherent to the data model, not an afterthought.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Extensibility</div>
+          <p>Adding a new data source, file format, or authentication type requires only inserting reference rows into the appropriate lookup tables. The generic pipeline accommodates new source/target combinations without any pipeline modification.</p>
+        </div>
+        <div class="principle-card">
+          <div class="principle-title">Idempotent Infrastructure</div>
+          <p>All DDL scripts use <code>IF NOT EXISTS</code> guards and include schema upgrade paths. The schema can be safely re-applied across environments — development, test, production — without destructive side effects.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 09 Data Fabric Alignment ──────────────────────────── -->
+    <section id="data-fabric">
+      <div class="section-label">09 — Governance</div>
+      <h2>Data Fabric Alignment</h2>
+      <p>The framework aligns with several foundational principles of modern Data Fabric architecture, specifically those concerned with active metadata management, unified cataloguing, and governed connectivity.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Data Fabric Principle</th><th>How the Framework Addresses It</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Active Metadata Management</strong></td>
+              <td><code>MetadataRef</code> is a live operational control plane — not passive documentation. It actively governs pipeline behaviour at execution time, making metadata the direct engine of data movement.</td>
+            </tr>
+            <tr>
+              <td><strong>Unified Data Catalogue</strong></td>
+              <td>All sources, target types, file formats, authentication methods, and connection configurations are centrally registered in the <code>EDP_Metadata</code> schema. No shadow configurations exist outside this registry.</td>
+            </tr>
+            <tr>
+              <td><strong>Business Domain Orientation</strong></td>
+              <td><code>BusinessDomainRef</code> classifies every ingestion job by business function. Every data movement activity is traceable to its owning domain — supporting data product thinking and domain-driven data governance.</td>
+            </tr>
+            <tr>
+              <td><strong>Governed Connectivity</strong></td>
+              <td><code>SystemAuth</code> and <code>LinkedServiceRef</code> enforce a structured, centralised approach to connection management. All authentication types and connection templates are catalogued and reused — there are no unregistered or one-off connections.</td>
+            </tr>
+            <tr>
+              <td><strong>Reusable Data Services</strong></td>
+              <td>The generic pipeline layer acts as a reusable data service. The same pipeline infrastructure serves all projects, domains, and customers without modification; variation is expressed purely in metadata records.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        The framework addresses the <em>ingestion layer</em> of a Data Fabric architecture. It is designed to integrate with broader platform components — data catalogues, lineage tools, and data quality frameworks — that complete the fabric.
+      </div>
+    </section>
+
+    <!-- ── 10 Benefits ───────────────────────────────────────── -->
+    <section id="benefits">
+      <div class="section-label">10 — Value</div>
+      <h2>Benefits</h2>
+
+      <h3>Operational</h3>
+      <div class="benefits-grid">
+        <div class="benefit-item">New data source onboarded with a single metadata row — no pipeline build or deployment required</div>
+        <div class="benefit-item">Centralised on/off control for any ingestion job without touching ADF pipelines or triggers</div>
+        <div class="benefit-item">Connection and path changes applied in metadata — no pipeline redeployment cycle</div>
+        <div class="benefit-item">Full visibility of all active ingestion jobs by querying a single control table</div>
+        <div class="benefit-item">Consistent pipeline behaviour across all sources — one proven pattern, not hundreds of variations</div>
+      </div>
+
+      <h3>Engineering</h3>
+      <div class="benefits-grid">
+        <div class="benefit-item">Dramatically reduced pipeline maintenance surface — one generic pipeline replaces one-per-source</div>
+        <div class="benefit-item">Environment portability — the same pipelines run across dev, test, and production with different metadata records</div>
+        <div class="benefit-item">Full Refresh and Incremental patterns supported from a single framework with no pipeline duplication</div>
+        <div class="benefit-item">Enforced naming conventions enable automated tooling, monitoring dashboards, and documentation generation</div>
+        <div class="benefit-item">Idempotent DDL supports safe schema deployment and controlled schema evolution across environments</div>
+      </div>
+
+      <h3>Governance</h3>
+      <div class="benefits-grid">
+        <div class="benefit-item">Audit trail on every ingestion job — who configured what, and when</div>
+        <div class="benefit-item">Business domain classification on every job — supports data lineage and ownership tracking</div>
+        <div class="benefit-item">Centralised, catalogued connection management — no unregistered or shadow connections</div>
+        <div class="benefit-item">Watermark state managed centrally — incremental load boundaries are visible and auditable</div>
+      </div>
+    </section>
+
+    <!-- ── Appendix ──────────────────────────────────────────── -->
+    <section id="appendix">
+      <div class="section-label">Appendix</div>
+      <h2>Schema Quick Reference</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Object</th><th>Type</th><th>Purpose</th><th>ADF Role</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>EDP_Metadata.MetadataRef</code></td><td>Table</td><td>Core control table — one row per ingestion job</td><td>Primary config store; queried via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.MasterRef</code></td><td>View</td><td>Denormalized runtime view over MetadataRef and all lookup tables; derives Pipeline_Name and SwitchCaseRef</td><td>Target of the Lookup activity</td></tr>
+            <tr><td><code>EDP_Metadata.Watermark</code></td><td>Table</td><td>High-water mark per incremental job; updated after each successful run</td><td>Read and written by incremental pipeline</td></tr>
+            <tr><td><code>EDP_Metadata.DatasetRef</code></td><td>Table</td><td>Unique Source + FileFormat combinations</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.LinkedServiceRef</code></td><td>Table</td><td>ADF linked service catalog with JSON connection templates</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.SourceRef</code></td><td>Table</td><td>Supported data source types and short codes</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.FileFormat</code></td><td>Table</td><td>Supported file formats</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.SystemAuth</code></td><td>Table</td><td>Supported authentication types and applicable connectors</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.BusinessDomainRef</code></td><td>Table</td><td>Business domain classification</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.colDelimitterRef</code></td><td>Table</td><td>Column delimiter reference values</td><td>Resolved via MasterRef</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="doc-footer">
+      Enterprise Data Platform — Metadata-Driven Ingestion Framework &nbsp;·&nbsp; Version 1.0 &nbsp;·&nbsp; August 2026 &nbsp;·&nbsp; Internal Use Only
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
