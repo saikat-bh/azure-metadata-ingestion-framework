@@ -24,10 +24,10 @@ A metadata-driven ingestion framework built on Azure. ADF pipelines (Full and In
 Azure_Claude/
 ├── .claude/
 │   └── settings.json          # MCP server config (Azure MCP)
-├── adf/
-│   ├── pipelines/             # ADF pipeline JSON definitions
-│   ├── datasets/              # ADF dataset JSON definitions
-│   └── linked_services/       # ADF linked service JSON definitions
+├── datafactory/
+│   ├── Pipelines/             # ADF pipeline JSON definitions
+│   ├── Dataset/               # ADF dataset JSON definitions
+│   └── LinkedService/         # ADF linked service JSON definitions
 ├── metadata/                  # Metadata config files / exports
 ├── sql/
 │   ├── ddl/                   # CREATE TABLE scripts for metadata tables
