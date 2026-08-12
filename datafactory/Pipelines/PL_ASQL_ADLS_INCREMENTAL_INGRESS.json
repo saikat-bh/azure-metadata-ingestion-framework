@@ -1,0 +1,605 @@
+{
+    "name": "PL_ASQL_ADLS_INCREMENTAL_INGRESS",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Incremental (delta) ingestion pipeline from Azure SQL to ADLS Gen2. Reads all active Incremental Ingress jobs for the given trigger from EDP_Metadata.MasterRef. Watermark column and last high-water mark value are resolved from metadata at runtime. Watermark is only advanced on confirmed successful copy with at least one row transferred. Parallel processing via ForEach (batchCount=5).",
+        "parameters": {
+            "TriggerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataServerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataDatabaseName": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "activities": [
+            {
+                "name": "Lookup_Metadata",
+                "description": "Fetches all active Incremental Ingress jobs for the given TriggerName from EDP_Metadata.MasterRef. Returns Watermark_Column and Watermark_Value alongside all connection and path parameters.",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM EDP_Metadata.MasterRef WHERE Trigger_Name = ''', pipeline().parameters.TriggerName, ''' AND IsActive = ''Active'' AND Load_Type = ''Incremental'' AND ActivityType = ''Ingress''')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_TABLE",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "serverName": {
+                                "value": "@pipeline().parameters.MetadataServerName",
+                                "type": "Expression"
+                            },
+                            "databaseName": {
+                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEach_Jobs",
+                "description": "Iterates over all active incremental jobs returned by the metadata lookup and processes them in parallel (batchCount=5). Each iteration validates its watermark before copying.",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_Metadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Lookup_Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 5,
+                    "activities": [
+                        {
+                            "name": "Switch_OutputFormat",
+                            "description": "Routes each job to the correct Copy activity based on SwitchCaseRef.",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().SwitchCaseRef",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_CSV",
+                                                "description": "Edge case #1: Detects misconfigured incremental jobs where Watermark_Column or Watermark_Value is NULL. Raises a Fail activity (WM001) so the issue is surfaced immediately rather than silently skipped or treated as a full load.",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": {
+                                                        "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))",
+                                                        "type": "Expression"
+                                                    },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_Invalid_Watermark_CSV",
+                                                            "description": "Raised when an incremental job has no Watermark assigned. Fix: set a valid Watermark_ID in EDP_Metadata.MetadataRef for this job.",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": {
+                                                                    "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark. Watermark_Column and Watermark_Value must both be set in EDP_Metadata.MetadataRef.')",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ASQL_to_ADLS_CSV",
+                                                            "description": "Copies the incremental delta from Azure SQL to ADLS Gen2 as CSV. Source query is the user-defined base query wrapped in a subquery with the watermark filter applied. Watermark column and last high-water mark value are resolved from EDP_Metadata at runtime.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": {
+                                                                "timeout": "0.12:00:00",
+                                                                "retry": 0,
+                                                                "retryIntervalInSeconds": 30,
+                                                                "secureOutput": false,
+                                                                "secureInput": false
+                                                            },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "AzureSqlSource",
+                                                                    "sqlReaderQuery": {
+                                                                        "value": "@concat('SELECT * FROM (', json(item().MetadataSettingsInput).Query, ') AS _incremental_src WHERE ', item().Watermark_Column, ' > ''', formatDateTime(item().Watermark_Value, 'yyyy-MM-dd HH:mm:ss'), '''')",
+                                                                        "type": "Expression"
+                                                                    },
+                                                                    "queryTimeout": "02:00:00",
+                                                                    "partitionOption": "None"
+                                                                },
+                                                                "sink": {
+                                                                    "type": "DelimitedTextSink",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSWriteSettings"
+                                                                    },
+                                                                    "formatSettings": {
+                                                                        "type": "DelimitedTextWriteSettings",
+                                                                        "quoteAllText": false,
+                                                                        "fileExtension": ".csv"
+                                                                    }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": {
+                                                                    "type": "TabularTranslator",
+                                                                    "typeConversion": true,
+                                                                    "typeConversionSettings": {
+                                                                        "allowDataTruncation": true,
+                                                                        "treatBooleanAsNumber": false
+                                                                    }
+                                                                }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ASQL_TABLE",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "serverName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "databaseName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": {
+                                                                            "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "container": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).container",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "directory": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "filename": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "columnDelimiter": {
+                                                                            "value": "@item().OutputColDelimitter",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_Copied_CSV",
+                                                            "description": "Edge case #2: Skips the watermark update when 0 rows were copied (no new data since last run). Preserving the existing watermark ensures the same window is re-checked next run rather than silently advancing past potentially missed records.",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [
+                                                                {
+                                                                    "activity": "Copy_ASQL_to_ADLS_CSV",
+                                                                    "dependencyConditions": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            ],
+                                                            "typeProperties": {
+                                                                "expression": {
+                                                                    "value": "@greater(activity('Copy_ASQL_to_ADLS_CSV').output.rowsCopied, 0)",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_CSV",
+                                                                        "description": "Advances Watermark_Value to the current UTC time. Only runs after a confirmed successful copy with at least one row transferred (edge cases #3 and #4). Uses Metadata_ID to identify the correct Watermark row via MetadataRef FK.",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": {
+                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "type": "Expression"
+                                                                                },
+                                                                                "databaseName": {
+                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "type": "Expression"
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [
+                                                                                {
+                                                                                    "text": {
+                                                                                        "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))",
+                                                                                        "type": "Expression"
+                                                                                    },
+                                                                                    "type": "NonQuery"
+                                                                                }
+                                                                            ],
+                                                                            "logSettings": {
+                                                                                "logDestination": "ActivityOutput"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_PARQUET",
+                                                "description": "Edge case #1: Detects missing Watermark on incremental jobs before attempting the copy.",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": {
+                                                        "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))",
+                                                        "type": "Expression"
+                                                    },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_Invalid_Watermark_PARQUET",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": {
+                                                                    "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark. Watermark_Column and Watermark_Value must both be set in EDP_Metadata.MetadataRef.')",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ASQL_to_ADLS_PARQUET",
+                                                            "description": "Copies the incremental delta from Azure SQL to ADLS Gen2 as Parquet. Watermark filter applied as subquery wrapper over the user-defined base query.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": {
+                                                                "timeout": "0.12:00:00",
+                                                                "retry": 0,
+                                                                "retryIntervalInSeconds": 30,
+                                                                "secureOutput": false,
+                                                                "secureInput": false
+                                                            },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "AzureSqlSource",
+                                                                    "sqlReaderQuery": {
+                                                                        "value": "@concat('SELECT * FROM (', json(item().MetadataSettingsInput).Query, ') AS _incremental_src WHERE ', item().Watermark_Column, ' > ''', formatDateTime(item().Watermark_Value, 'yyyy-MM-dd HH:mm:ss'), '''')",
+                                                                        "type": "Expression"
+                                                                    },
+                                                                    "queryTimeout": "02:00:00",
+                                                                    "partitionOption": "None"
+                                                                },
+                                                                "sink": {
+                                                                    "type": "ParquetSink",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSWriteSettings"
+                                                                    },
+                                                                    "formatSettings": {
+                                                                        "type": "ParquetWriteSettings"
+                                                                    }
+                                                                },
+                                                                "enableStaging": false
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ASQL_TABLE",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "serverName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "databaseName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": {
+                                                                            "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "container": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).container",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "directory": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "filename": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_Copied_PARQUET",
+                                                            "description": "Edge case #2: Skips watermark update when 0 rows copied.",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [
+                                                                {
+                                                                    "activity": "Copy_ASQL_to_ADLS_PARQUET",
+                                                                    "dependencyConditions": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            ],
+                                                            "typeProperties": {
+                                                                "expression": {
+                                                                    "value": "@greater(activity('Copy_ASQL_to_ADLS_PARQUET').output.rowsCopied, 0)",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_PARQUET",
+                                                                        "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": {
+                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "type": "Expression"
+                                                                                },
+                                                                                "databaseName": {
+                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "type": "Expression"
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [
+                                                                                {
+                                                                                    "text": {
+                                                                                        "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))",
+                                                                                        "type": "Expression"
+                                                                                    },
+                                                                                    "type": "NonQuery"
+                                                                                }
+                                                                            ],
+                                                                            "logSettings": {
+                                                                                "logDestination": "ActivityOutput"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_JSON",
+                                                "description": "Edge case #1: Detects missing Watermark on incremental jobs before attempting the copy.",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": {
+                                                        "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))",
+                                                        "type": "Expression"
+                                                    },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_Invalid_Watermark_JSON",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": {
+                                                                    "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark. Watermark_Column and Watermark_Value must both be set in EDP_Metadata.MetadataRef.')",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ASQL_to_ADLS_JSON",
+                                                            "description": "Copies the incremental delta from Azure SQL to ADLS Gen2 as JSON. Watermark filter applied as subquery wrapper over the user-defined base query.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": {
+                                                                "timeout": "0.12:00:00",
+                                                                "retry": 0,
+                                                                "retryIntervalInSeconds": 30,
+                                                                "secureOutput": false,
+                                                                "secureInput": false
+                                                            },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "AzureSqlSource",
+                                                                    "sqlReaderQuery": {
+                                                                        "value": "@concat('SELECT * FROM (', json(item().MetadataSettingsInput).Query, ') AS _incremental_src WHERE ', item().Watermark_Column, ' > ''', formatDateTime(item().Watermark_Value, 'yyyy-MM-dd HH:mm:ss'), '''')",
+                                                                        "type": "Expression"
+                                                                    },
+                                                                    "queryTimeout": "02:00:00",
+                                                                    "partitionOption": "None"
+                                                                },
+                                                                "sink": {
+                                                                    "type": "JsonSink",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSWriteSettings"
+                                                                    },
+                                                                    "formatSettings": {
+                                                                        "type": "JsonWriteSettings"
+                                                                    }
+                                                                },
+                                                                "enableStaging": false
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ASQL_TABLE",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "serverName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "databaseName": {
+                                                                            "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": {
+                                                                            "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "container": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).container",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "directory": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "filename": {
+                                                                            "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                            "type": "Expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_Copied_JSON",
+                                                            "description": "Edge case #2: Skips watermark update when 0 rows copied.",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [
+                                                                {
+                                                                    "activity": "Copy_ASQL_to_ADLS_JSON",
+                                                                    "dependencyConditions": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            ],
+                                                            "typeProperties": {
+                                                                "expression": {
+                                                                    "value": "@greater(activity('Copy_ASQL_to_ADLS_JSON').output.rowsCopied, 0)",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_JSON",
+                                                                        "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": {
+                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "type": "Expression"
+                                                                                },
+                                                                                "databaseName": {
+                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "type": "Expression"
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [
+                                                                                {
+                                                                                    "text": {
+                                                                                        "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))",
+                                                                                        "type": "Expression"
+                                                                                    },
+                                                                                    "type": "NonQuery"
+                                                                                }
+                                                                            ],
+                                                                            "logSettings": {
+                                                                                "logDestination": "ActivityOutput"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}
