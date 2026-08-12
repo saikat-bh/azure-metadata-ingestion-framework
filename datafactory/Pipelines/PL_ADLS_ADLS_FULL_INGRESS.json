@@ -1,0 +1,743 @@
+{
+    "name": "PL_ADLS_ADLS_FULL_INGRESS",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Full refresh ingestion pipeline from ADLS Gen2 to ADLS Gen2. Reads all active Full Refresh Ingress jobs for the given trigger from EDP_Metadata.MasterRef. Switch routes each job to the correct Copy activity based on the source and target file format combination (CSV, Parquet, JSON). All 9 format-to-format combinations are covered. Parallel processing via ForEach (batchCount=5).",
+        "parameters": {
+            "TriggerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataServerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataDatabaseName": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "activities": [
+            {
+                "name": "Lookup_Metadata",
+                "description": "Fetches all active Full Refresh Ingress jobs for the given TriggerName from EDP_Metadata.MasterRef.",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM EDP_Metadata.MasterRef WHERE Trigger_Name = ''', pipeline().parameters.TriggerName, ''' AND IsActive = ''Active'' AND Load_Type = ''Full_Refresh'' AND ActivityType = ''Ingress''')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_TABLE",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "serverName": {
+                                "value": "@pipeline().parameters.MetadataServerName",
+                                "type": "Expression"
+                            },
+                            "databaseName": {
+                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEach_Jobs",
+                "description": "Iterates over all active jobs returned by the metadata lookup and processes them in parallel (batchCount=5).",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_Metadata",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Lookup_Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 5,
+                    "activities": [
+                        {
+                            "name": "Switch_OutputFormat",
+                            "description": "Routes each job to the correct Copy activity based on SwitchCaseRef (source LS + source format + output LS + output format). Covers all 9 combinations: CSV/Parquet/JSON as source and CSV/Parquet/JSON as target.",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().SwitchCaseRef",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_CSV_to_ADLS_CSV",
+                                                "description": "Full refresh: copies CSV from source ADLS path to target ADLS path as CSV. All connection and path details resolved from metadata at runtime.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "DelimitedTextSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "DelimitedTextSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextWriteSettings",
+                                                            "quoteAllText": false,
+                                                            "fileExtension": ".csv"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_CSV_to_ADLS_PARQUET",
+                                                "description": "Full refresh: converts CSV to Parquet (Snappy compressed). ADF infers column types from the CSV header row.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "DelimitedTextSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "ParquetSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "ParquetWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_CSV_to_ADLS_JSON",
+                                                "description": "Full refresh: converts CSV to JSON. Each CSV row becomes a JSON object keyed by column headers.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "DelimitedTextSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "JsonSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_PARQUET_to_ADLS_CSV",
+                                                "description": "Full refresh: converts Parquet to CSV. Column delimiter resolved from OutputColDelimitter in metadata.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "ParquetSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "DelimitedTextSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextWriteSettings",
+                                                            "quoteAllText": false,
+                                                            "fileExtension": ".csv"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_PARQUET_to_ADLS_PARQUET",
+                                                "description": "Full refresh: copies Parquet to Parquet (Snappy compressed). Source and target can be different storage accounts.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "ParquetSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "ParquetSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "ParquetWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_PARQUET_to_ADLS_JSON",
+                                                "description": "Full refresh: converts Parquet to JSON. Each Parquet row becomes a JSON object.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "ParquetSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "JsonSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_JSON_to_ADLS_CSV",
+                                                "description": "Full refresh: converts JSON to CSV. JSON must be tabular (array of flat objects). Nested structures are not supported by TabularTranslator without a Data Flow.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "JsonSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "DelimitedTextSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextWriteSettings",
+                                                            "quoteAllText": false,
+                                                            "fileExtension": ".csv"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                            "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_JSON_to_ADLS_PARQUET",
+                                                "description": "Full refresh: converts JSON to Parquet (Snappy compressed). JSON must be tabular (array of flat objects).",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "JsonSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "ParquetSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "ParquetWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ADLS_JSON_to_ADLS_JSON",
+                                                "description": "Full refresh: copies JSON to JSON. Source and target can be different storage accounts or containers.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "JsonSource",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSReadSettings",
+                                                            "recursive": false,
+                                                            "enablePartitionDiscovery": false
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonReadSettings"
+                                                        }
+                                                    },
+                                                    "sink": {
+                                                        "type": "JsonSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                            "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                            "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                            "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}

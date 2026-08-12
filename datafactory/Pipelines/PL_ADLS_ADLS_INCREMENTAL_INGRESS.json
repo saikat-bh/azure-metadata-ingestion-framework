@@ -1,0 +1,1077 @@
+{
+    "name": "PL_ADLS_ADLS_INCREMENTAL_INGRESS",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Incremental (delta) ingestion pipeline from ADLS Gen2 to ADLS Gen2. Reads all active Incremental Ingress jobs for the given trigger from EDP_Metadata.MasterRef. For file-based sources the watermark is applied as a file modification time filter (modifiedDatetimeStart) on the source read settings — only files modified after Watermark_Value are read. Watermark is only advanced on confirmed successful copy with at least one row transferred. All 9 source/target format combinations (CSV, Parquet, JSON) are covered. Parallel processing via ForEach (batchCount=5). NOTE: source filename in metadata may be a wildcard (e.g. *.csv) to pick up multiple new files per run.",
+        "parameters": {
+            "TriggerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataServerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataDatabaseName": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "activities": [
+            {
+                "name": "Lookup_Metadata",
+                "description": "Fetches all active Incremental Ingress jobs for the given TriggerName from EDP_Metadata.MasterRef. Returns Watermark_Value (used as modifiedDatetimeStart) and Watermark_Column (label for the tracked time dimension) alongside all connection and path parameters.",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM EDP_Metadata.MasterRef WHERE Trigger_Name = ''', pipeline().parameters.TriggerName, ''' AND IsActive = ''Active'' AND Load_Type = ''Incremental'' AND ActivityType = ''Ingress''')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_TABLE",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "serverName": {
+                                "value": "@pipeline().parameters.MetadataServerName",
+                                "type": "Expression"
+                            },
+                            "databaseName": {
+                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEach_Jobs",
+                "description": "Iterates over all active incremental jobs returned by the metadata lookup and processes them in parallel (batchCount=5).",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_Metadata",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Lookup_Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 5,
+                    "activities": [
+                        {
+                            "name": "Switch_OutputFormat",
+                            "description": "Routes each job to the correct Copy activity based on SwitchCaseRef. Covers all 9 ADLS format-to-format combinations.",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().SwitchCaseRef",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_CSV_to_CSV",
+                                                "description": "Fails fast with WM001 if Watermark_Value is null, preventing an incremental job from running without a valid high-water mark.",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": {
+                                                        "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))",
+                                                        "type": "Expression"
+                                                    },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_CSV_to_CSV",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": {
+                                                                    "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark. Watermark_Column and Watermark_Value must both be set in EDP_Metadata.MetadataRef.')",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_CSV_to_ADLS_CSV",
+                                                            "description": "Incremental delta: reads only source CSV files modified after Watermark_Value (modifiedDatetimeStart filter). Copies to target ADLS path as CSV.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": {
+                                                                "timeout": "0.12:00:00",
+                                                                "retry": 0,
+                                                                "retryIntervalInSeconds": 30,
+                                                                "secureOutput": false,
+                                                                "secureInput": false
+                                                            },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "DelimitedTextSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": {
+                                                                            "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')",
+                                                                            "type": "Expression"
+                                                                        },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": {
+                                                                        "type": "DelimitedTextReadSettings"
+                                                                    }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "DelimitedTextSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": {
+                                                                        "type": "DelimitedTextWriteSettings",
+                                                                        "quoteAllText": false,
+                                                                        "fileExtension": ".csv"
+                                                                    }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": {
+                                                                    "type": "TabularTranslator",
+                                                                    "typeConversion": true,
+                                                                    "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false }
+                                                                }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_CSV_to_CSV",
+                                                            "description": "Skips watermark advance when 0 rows copied (no new files since last run). Watermark preserved so next run re-checks the same window.",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [
+                                                                { "activity": "Copy_ADLS_CSV_to_ADLS_CSV", "dependencyConditions": ["Succeeded"] }
+                                                            ],
+                                                            "typeProperties": {
+                                                                "expression": {
+                                                                    "value": "@greater(activity('Copy_ADLS_CSV_to_ADLS_CSV').output.rowsCopied, 0)",
+                                                                    "type": "Expression"
+                                                                },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_CSV_to_CSV",
+                                                                        "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [
+                                                                                {
+                                                                                    "text": {
+                                                                                        "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))",
+                                                                                        "type": "Expression"
+                                                                                    },
+                                                                                    "type": "NonQuery"
+                                                                                }
+                                                                            ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_CSV_to_PARQUET",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_CSV_to_PARQUET",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_CSV_to_ADLS_PARQUET",
+                                                            "description": "Incremental delta: reads new CSV files (modifiedDatetimeStart filter), converts to Parquet (Snappy).",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "DelimitedTextSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": { "type": "DelimitedTextReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "ParquetSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "ParquetWriteSettings" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_CSV_to_PARQUET",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_CSV_to_ADLS_PARQUET", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_CSV_to_ADLS_PARQUET').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_CSV_to_PARQUET",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_CSV_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_CSV_to_JSON",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_CSV_to_JSON",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_CSV_to_ADLS_JSON",
+                                                            "description": "Incremental delta: reads new CSV files, converts to JSON.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "DelimitedTextSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": { "type": "DelimitedTextReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "JsonSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "JsonWriteSettings" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().InputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_CSV_to_JSON",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_CSV_to_ADLS_JSON", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_CSV_to_ADLS_JSON').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_CSV_to_JSON",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_PARQUET_to_CSV",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_PARQUET_to_CSV",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_PARQUET_to_ADLS_CSV",
+                                                            "description": "Incremental delta: reads new Parquet files, converts to CSV.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "ParquetSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "DelimitedTextSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "DelimitedTextWriteSettings", "quoteAllText": false, "fileExtension": ".csv" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_PARQUET_to_CSV",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_PARQUET_to_ADLS_CSV", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_PARQUET_to_ADLS_CSV').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_PARQUET_to_CSV",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_PARQUET_to_PARQUET",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_PARQUET_to_PARQUET",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_PARQUET_to_ADLS_PARQUET",
+                                                            "description": "Incremental delta: reads new Parquet files, writes as Parquet (Snappy).",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "ParquetSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "ParquetSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "ParquetWriteSettings" }
+                                                                },
+                                                                "enableStaging": false
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_PARQUET_to_PARQUET",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_PARQUET_to_ADLS_PARQUET", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_PARQUET_to_ADLS_PARQUET').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_PARQUET_to_PARQUET",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_PARQUET_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_PARQUET_to_JSON",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_PARQUET_to_JSON",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_PARQUET_to_ADLS_JSON",
+                                                            "description": "Incremental delta: reads new Parquet files, converts to JSON.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "ParquetSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "JsonSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "JsonWriteSettings" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_PARQUET_to_JSON",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_PARQUET_to_ADLS_JSON", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_PARQUET_to_ADLS_JSON').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_PARQUET_to_JSON",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_JSON_to_CSV",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_JSON_to_CSV",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_JSON_to_ADLS_CSV",
+                                                            "description": "Incremental delta: reads new JSON files, converts to CSV. JSON must be tabular.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "JsonSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": { "type": "JsonReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "DelimitedTextSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "DelimitedTextWriteSettings", "quoteAllText": false, "fileExtension": ".csv" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_CSV",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" },
+                                                                        "columnDelimiter": { "value": "@item().OutputColDelimitter", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_JSON_to_CSV",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_JSON_to_ADLS_CSV", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_JSON_to_ADLS_CSV').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_JSON_to_CSV",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_JSON_to_PARQUET",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_JSON_to_PARQUET",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_JSON_to_ADLS_PARQUET",
+                                                            "description": "Incremental delta: reads new JSON files, converts to Parquet (Snappy). JSON must be tabular.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "JsonSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": { "type": "JsonReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "ParquetSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "ParquetWriteSettings" }
+                                                                },
+                                                                "enableStaging": false,
+                                                                "translator": { "type": "TabularTranslator", "typeConversion": true, "typeConversionSettings": { "allowDataTruncation": true, "treatBooleanAsNumber": false } }
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_PARQUET",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_JSON_to_PARQUET",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_JSON_to_ADLS_PARQUET", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_JSON_to_ADLS_PARQUET').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_JSON_to_PARQUET",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ADLS_SAMI_JSON_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Validate_Watermark_JSON_to_JSON",
+                                                "type": "IfCondition",
+                                                "dependsOn": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Fail_No_Watermark_JSON_to_JSON",
+                                                            "type": "Fail",
+                                                            "dependsOn": [],
+                                                            "typeProperties": {
+                                                                "message": { "value": "@concat('Incremental job [', item().Metadata_Job, '] (Metadata_ID: ', string(item().Metadata_ID), ') is missing a valid Watermark.')", "type": "Expression" },
+                                                                "errorCode": "WM001"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Copy_ADLS_JSON_to_ADLS_JSON",
+                                                            "description": "Incremental delta: reads new JSON files, writes as JSON.",
+                                                            "type": "Copy",
+                                                            "dependsOn": [],
+                                                            "policy": { "timeout": "0.12:00:00", "retry": 0, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "typeProperties": {
+                                                                "source": {
+                                                                    "type": "JsonSource",
+                                                                    "storeSettings": {
+                                                                        "type": "AzureBlobFSReadSettings",
+                                                                        "recursive": false,
+                                                                        "modifiedDatetimeStart": { "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')", "type": "Expression" },
+                                                                        "enablePartitionDiscovery": false
+                                                                    },
+                                                                    "formatSettings": { "type": "JsonReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "JsonSink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" },
+                                                                    "formatSettings": { "type": "JsonWriteSettings" }
+                                                                },
+                                                                "enableStaging": false
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().InputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsInput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsInput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsInput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_JSON",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "URL": { "value": "@json(item().OutputLinkedServiceConnectionString).URL", "type": "Expression" },
+                                                                        "container": { "value": "@json(item().MetadataSettingsOutput).container", "type": "Expression" },
+                                                                        "directory": { "value": "@json(item().MetadataSettingsOutput).directory", "type": "Expression" },
+                                                                        "filename": { "value": "@json(item().MetadataSettingsOutput).filename", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Check_Rows_JSON_to_JSON",
+                                                            "type": "IfCondition",
+                                                            "dependsOn": [ { "activity": "Copy_ADLS_JSON_to_ADLS_JSON", "dependencyConditions": ["Succeeded"] } ],
+                                                            "typeProperties": {
+                                                                "expression": { "value": "@greater(activity('Copy_ADLS_JSON_to_ADLS_JSON').output.rowsCopied, 0)", "type": "Expression" },
+                                                                "ifTrueActivities": [
+                                                                    {
+                                                                        "name": "Update_Watermark_JSON_to_JSON",
+                                                                        "type": "Script",
+                                                                        "dependsOn": [],
+                                                                        "linkedService": {
+                                                                            "referenceName": "LS_ASQL_SAMI",
+                                                                            "type": "LinkedServiceReference",
+                                                                            "parameters": {
+                                                                                "serverName": { "value": "@pipeline().parameters.MetadataServerName", "type": "Expression" },
+                                                                                "databaseName": { "value": "@pipeline().parameters.MetadataDatabaseName", "type": "Expression" }
+                                                                            }
+                                                                        },
+                                                                        "typeProperties": {
+                                                                            "scripts": [ { "text": { "value": "@concat('UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'), ''') FROM EDP_Metadata.Watermark w JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID WHERE m.Metadata_ID = ', string(item().Metadata_ID))", "type": "Expression" }, "type": "NonQuery" } ],
+                                                                            "logSettings": { "logDestination": "ActivityOutput" }
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "ifFalseActivities": []
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}
