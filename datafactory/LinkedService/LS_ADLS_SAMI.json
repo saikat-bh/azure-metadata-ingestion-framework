@@ -1,0 +1,17 @@
+{
+    "name": "LS_ADLS_SAMI",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "type": "AzureBlobFS",
+        "parameters": {
+            "URL": {
+                "type": "String"
+            }
+        },
+        "typeProperties": {
+            "url": "@{linkedService().URL}"
+        },
+        "annotations": [],
+        "description": "ADLS Gen2 linked service using System-Assigned Managed Identity. URL is resolved at runtime from EDP_Metadata.LinkedServiceRef via the pipeline Lookup activity."
+    }
+}
