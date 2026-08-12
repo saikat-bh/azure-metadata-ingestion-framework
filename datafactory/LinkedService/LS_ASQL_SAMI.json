@@ -1,0 +1,25 @@
+{
+    "name": "LS_ASQL_SAMI",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "version": "2.0",
+        "type": "AzureSqlDatabase",
+        "parameters": {
+            "serverName": {
+                "type": "String"
+            },
+            "databaseName": {
+                "type": "String"
+            }
+        },
+        "typeProperties": {
+            "server": "@{linkedService().serverName}",
+            "database": "@{linkedService().databaseName}",
+            "encrypt": "mandatory",
+            "trustServerCertificate": false,
+            "authenticationType": "ManagedServiceIdentity"
+        },
+        "annotations": [],
+        "description": "Azure SQL linked service using System-Assigned Managed Identity. serverName and databaseName are resolved at runtime from EDP_Metadata.LinkedServiceRef via the pipeline Lookup activity."
+    }
+}
