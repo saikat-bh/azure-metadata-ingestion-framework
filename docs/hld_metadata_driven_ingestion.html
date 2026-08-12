@@ -21,6 +21,8 @@
   --ok-text:     #166534;
   --warn-bg:     #FFF7E0;
   --warn-text:   #854D0E;
+  --danger-bg:   #FEF2F2;
+  --danger-text: #991B1B;
   --tag-bg:      #EDF2FF;
   --tag-text:    #3145A6;
   --shadow:      0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
@@ -44,6 +46,8 @@
     --ok-text:     #4ADE80;
     --warn-bg:     #231500;
     --warn-text:   #FACC15;
+    --danger-bg:   #200A0A;
+    --danger-text: #FCA5A5;
     --tag-bg:      #131E3B;
     --tag-text:    #93B4F8;
     --shadow:      0 1px 4px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.3);
@@ -66,6 +70,8 @@
   --ok-text:     #4ADE80;
   --warn-bg:     #231500;
   --warn-text:   #FACC15;
+  --danger-bg:   #200A0A;
+  --danger-text: #FCA5A5;
   --tag-bg:      #131E3B;
   --tag-text:    #93B4F8;
   --shadow:      0 1px 4px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.3);
@@ -117,6 +123,11 @@ body{
   display:block;
 }
 .sidebar a:hover{background:var(--accent-bg);color:var(--accent)}
+.sidebar a.highlight-nav{
+  color:var(--danger-text);
+  font-weight:600;
+}
+.sidebar a.highlight-nav:hover{background:var(--danger-bg);color:var(--danger-text)}
 
 /* ── Main content ─────────────────────────────────────────── */
 .content{
@@ -170,6 +181,7 @@ section{margin-bottom:3.25rem}
   color:var(--accent);
   margin-bottom:.45rem;
 }
+.section-label.danger{color:var(--danger-text)}
 h2{
   font-size:1.38rem;
   font-weight:700;
@@ -178,6 +190,7 @@ h2{
   padding-bottom:.55rem;
   border-bottom:2px solid var(--accent-bg);
 }
+h2.danger-h2{border-bottom-color:var(--danger-bg)}
 h3{font-size:1rem;font-weight:600;margin:1.5rem 0 .45rem;color:var(--text)}
 p{color:var(--text-2s);margin-bottom:.7rem;max-width:66ch}
 ul,ol{color:var(--text-2s);padding-left:1.4rem;margin-bottom:.75rem}
@@ -199,6 +212,16 @@ strong{color:var(--text);font-weight:600}
   border-color:var(--warn-text);
   color:var(--warn-text);
 }
+.callout.danger{
+  background:var(--danger-bg);
+  border-color:var(--danger-text);
+  color:var(--danger-text);
+}
+.callout.ok{
+  background:var(--ok-bg);
+  border-color:var(--ok-text);
+  color:var(--ok-text);
+}
 
 /* ── Badge ────────────────────────────────────────────────── */
 .badge{
@@ -214,6 +237,7 @@ strong{color:var(--text);font-weight:600}
 .badge.ok{background:var(--ok-bg);color:var(--ok-text)}
 .badge.warn{background:var(--warn-bg);color:var(--warn-text)}
 .badge.accent{background:var(--accent-bg);color:var(--accent)}
+.badge.danger{background:var(--danger-bg);color:var(--danger-text)}
 
 /* ── Tables ───────────────────────────────────────────────── */
 .table-wrap{overflow-x:auto;margin-bottom:1.25rem;border-radius:7px;border:1px solid var(--border)}
@@ -310,6 +334,17 @@ td code,th code{
   color:var(--text-2s);
   text-align:center;
 }
+.flow-step.danger-step{
+  background:var(--danger-bg);
+  border-color:var(--danger-text);
+  color:var(--danger-text);
+  font-weight:600;
+}
+.flow-step.ok-step{
+  background:var(--ok-bg);
+  border-color:var(--ok-text);
+  color:var(--ok-text);
+}
 .flow-arrow{color:var(--label);font-size:.9rem}
 
 /* ── Principles grid ──────────────────────────────────────── */
@@ -340,6 +375,51 @@ td code,th code{
   flex-shrink:0;
 }
 .principle-card p{font-size:.83rem;max-width:none;margin-bottom:0}
+
+/* ── Edge-case cards ──────────────────────────────────────── */
+.edge-case-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:1rem;
+  margin-top:1.25rem;
+}
+.edge-case-card{
+  background:var(--surface);
+  border:1.5px solid var(--danger-text);
+  border-left-width:4px;
+  border-radius:8px;
+  padding:1rem 1.15rem;
+  box-shadow:var(--shadow);
+}
+.edge-case-header{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin-bottom:.55rem;
+}
+.edge-case-code{
+  font-family:var(--mono);
+  font-size:.75rem;
+  font-weight:700;
+  color:var(--danger-text);
+  background:var(--danger-bg);
+  padding:.15rem .45rem;
+  border-radius:4px;
+}
+.edge-case-title{
+  font-size:.95rem;
+  font-weight:700;
+  color:var(--text);
+}
+.edge-case-card p{font-size:.85rem;margin-bottom:.45rem;max-width:none}
+.edge-case-card ul{font-size:.85rem;margin-bottom:.4rem}
+.edge-case-scope{
+  font-size:.75rem;
+  color:var(--label);
+  margin-top:.5rem;
+  padding-top:.5rem;
+  border-top:1px solid var(--border);
+}
 
 /* ── Benefits grid ────────────────────────────────────────── */
 .benefits-grid{
@@ -410,8 +490,15 @@ td code,th code{
       <a href="#schema">Metadata Schema</a>
       <a href="#runtime">Runtime Execution</a>
 
-      <div class="nav-group">Patterns</div>
+      <div class="nav-group">Pipelines</div>
+      <a href="#catalog">Pipeline Catalog</a>
+      <a href="#datasets">Datasets &amp; Global Params</a>
+
+      <div class="nav-group">Load Patterns</div>
       <a href="#load-patterns">Load Patterns</a>
+      <a href="#resilience" class="highlight-nav">Incremental Resilience</a>
+
+      <div class="nav-group">Conventions</div>
       <a href="#naming">Naming Conventions</a>
 
       <div class="nav-group">Principles</div>
@@ -433,7 +520,7 @@ td code,th code{
       <h1>Metadata-Driven Ingestion Framework</h1>
       <p class="doc-subtitle">A reusable, configuration-controlled data integration layer on Azure that eliminates per-source pipeline development and centralises all ingestion behaviour in a single metadata control plane.</p>
       <div class="doc-meta">
-        <span>Version 1.0</span>
+        <span>Version 2.0</span>
         <span>August 2026</span>
         <span>Classification: Internal</span>
       </div>
@@ -445,7 +532,8 @@ td code,th code{
       <h2>Executive Summary</h2>
       <p>The Metadata-Driven Ingestion Framework provides a single, reusable, and centrally governed data integration layer on Azure. Instead of building a dedicated pipeline for each data source, a suite of generic Azure Data Factory pipelines covers all ingestion scenarios — with runtime behaviour driven entirely by metadata stored in a central Azure SQL schema (<code>EDP_Metadata</code>).</p>
       <p>Onboarding a new data source requires no pipeline development or deployment. A metadata record is inserted into the control table and the existing generic pipeline automatically handles the ingestion — resolving connections, dataset types, file formats, column delimiters, load strategy, and target paths at runtime from the metadata.</p>
-      <p>The framework supports both <strong>Full Refresh</strong> and <strong>Incremental (Delta)</strong> load patterns, Ingress and Egress activity directions, and a broad range of source and target connectors across file-based and database systems.</p>
+      <p>The framework supports both <strong>Full Refresh</strong> and <strong>Incremental (Delta)</strong> load patterns, Ingress and Egress activity directions, and a broad range of source and target connectors across file-based and database systems. As of v2.0, four pipelines covering Azure SQL and ADLS Gen2 source/target combinations are fully deployed and operational, with support for standard formats (CSV, Parquet, JSON), compressed sources (GZIP, ZIP, TarGzip), and binary file pass-through.</p>
+      <p>Configuration-level parameters shared across all pipelines — such as the metadata server and database coordinates — are managed as <strong>ADF Global Parameters</strong>, removing them entirely from individual pipeline definitions and providing a single configuration point at the factory level.</p>
     </section>
 
     <!-- ── 02 Problem Statement ──────────────────────────────── -->
@@ -491,14 +579,18 @@ td code,th code{
           <div class="arch-steps">
             <div class="arch-step">
               <div class="step-num">1</div>
-              <div><strong>Lookup</strong> — Queries <code>EDP_Metadata.MasterRef</code> view; resolves the complete runtime configuration for the job in a single call</div>
+              <div><strong>Lookup</strong> — Queries <code>EDP_Metadata.MasterRef</code> view; resolves the complete runtime configuration for the job in a single call. Metadata server and database are resolved from ADF Global Parameters.</div>
             </div>
             <div class="arch-step">
               <div class="step-num">2</div>
-              <div><strong>Switch</strong> — Evaluates <code>SwitchCaseRef</code> to route to the correct Copy activity for the source/target/format combination</div>
+              <div><strong>ForEach</strong> — Iterates over all active jobs returned by the Lookup in parallel (batch size: 5), passing each job's metadata row to the Switch activity</div>
             </div>
             <div class="arch-step">
               <div class="step-num">3</div>
+              <div><strong>Switch</strong> — Evaluates <code>SwitchCaseRef</code> to route to the correct Copy activity for the source/target/format combination</div>
+            </div>
+            <div class="arch-step">
+              <div class="step-num">4</div>
               <div><strong>Copy</strong> — Executes with fully dynamic expressions; all paths, queries, and connection details resolved from <code>MetadataSettingsInput</code> / <code>MetadataSettingsOutput</code> JSON at runtime</div>
             </div>
           </div>
@@ -565,9 +657,9 @@ td code,th code{
             <tr><td><code>OutputLinkedServiceConnectionID</code></td><td>INT (FK)</td><td>Target connection; references <code>LinkedServiceRef</code></td></tr>
             <tr><td><code>MetadataSettingsInput</code></td><td>NVARCHAR(MAX) JSON</td><td>Runtime source parameters — container, directory path, filename, SQL query, schema, table, server, etc.</td></tr>
             <tr><td><code>MetadataSettingsOutput</code></td><td>NVARCHAR(MAX) JSON</td><td>Runtime target parameters — container, directory, filename, schema, table, etc.</td></tr>
-            <tr><td><code>ActivityType</code></td><td>BIT</td><td><span class="badge">0 = Ingress</span>&nbsp; <span class="badge accent">1 = Egress</span></td></tr>
-            <tr><td><code>IsActive</code></td><td>BIT</td><td><span class="badge ok">1 = Active</span>&nbsp; <span class="badge warn">0 = Inactive</span> — master on/off switch for any job</td></tr>
-            <tr><td><code>Load_Type</code></td><td>BIT</td><td><span class="badge">0 = Full Refresh</span>&nbsp; <span class="badge accent">1 = Incremental</span></td></tr>
+            <tr><td><code>ActivityType</code></td><td>NVARCHAR(20)</td><td><span class="badge">Ingress</span>&nbsp; <span class="badge accent">Egress</span></td></tr>
+            <tr><td><code>IsActive</code></td><td>NVARCHAR(10)</td><td><span class="badge ok">Active</span>&nbsp; <span class="badge warn">Inactive</span> — master on/off switch for any job</td></tr>
+            <tr><td><code>Load_Type</code></td><td>NVARCHAR(20)</td><td><span class="badge">Full_Refresh</span>&nbsp; <span class="badge accent">Incremental</span></td></tr>
             <tr><td><code>Watermark_ID</code></td><td>INT (FK, nullable)</td><td>NULL for Full Refresh; references <code>Watermark</code> table for Incremental jobs</td></tr>
             <tr><td><code>Created_Date</code></td><td>DATETIME</td><td>Auto-set on insert via default constraint</td></tr>
             <tr><td><code>Modified_Date</code></td><td>DATETIME</td><td>Tracks last modification timestamp</td></tr>
@@ -577,9 +669,9 @@ td code,th code{
       </div>
 
       <h3>Runtime View — MasterRef</h3>
-      <p><code>EDP_Metadata.MasterRef</code> is a denormalized view that joins <code>MetadataRef</code> with all its lookup tables. The ADF Lookup activity targets this view to retrieve the complete runtime configuration for a given <code>Metadata_Job</code> in a single query. The view also derives two computed values:</p>
+      <p><code>EDP_Metadata.MasterRef</code> is a denormalized view that joins <code>MetadataRef</code> with all its lookup tables. The ADF Lookup activity targets this view to retrieve the complete runtime configuration for a given <code>Trigger_Name</code> in a single query. The view also derives two computed values:</p>
       <ul>
-        <li><strong>Pipeline_Name</strong> — Derived from input source reference, output source reference, load type, and activity direction. Format: <code>PL_{InputSource}_{OutputSource}_{FULL|Delta}_{INGRESS|EGRESS}</code></li>
+        <li><strong>Pipeline_Name</strong> — Derived from input source reference, output source reference, load type, and activity direction. Format: <code>PL_{InputSource}_{OutputSource}_{FULL|INCREMENTAL}_{INGRESS|EGRESS}</code></li>
         <li><strong>SwitchCaseRef</strong> — Derived from the input and output linked service names and file formats. Used by the ADF Switch activity to select the correct Copy activity for the connector/format combination.</li>
       </ul>
 
@@ -597,7 +689,7 @@ td code,th code{
             </tr>
             <tr>
               <td><strong>FileFormat</strong></td>
-              <td>Lookup of all supported file formats (e.g. CSV, Parquet, ZIP). Not applicable to table-based sources such as Azure SQL, Oracle, or MySQL — those use a TABLE suffix.</td>
+              <td>Lookup of all supported file formats (e.g. CSV, Parquet, JSON, GZIP_CSV, ZIP_CSV, BINARY). Not applicable to table-based sources such as Azure SQL — those use a TABLE suffix.</td>
               <td><code>Format</code></td>
             </tr>
             <tr>
@@ -607,7 +699,7 @@ td code,th code{
             </tr>
             <tr>
               <td><strong>LinkedServiceRef</strong></td>
-              <td>Catalogue of all ADF linked services defined as valid Source × Authentication combinations. Connection strings are stored as JSON templates; runtime values are supplied dynamically. Named <code>LS_{Source_Ref}_{Auth_Ref}</code>.</td>
+              <td>Catalogue of all ADF linked services defined as valid Source x Authentication combinations. Connection strings are stored as JSON templates; runtime values are supplied dynamically. Named <code>LS_{Source_Ref}_{Auth_Ref}</code>.</td>
               <td><code>LinkedServiceName</code>, <code>LinkedServiceConnectionString</code>, <code>Source_ID</code>, <code>Auth_ID</code></td>
             </tr>
             <tr>
@@ -627,7 +719,7 @@ td code,th code{
             </tr>
             <tr>
               <td><strong>Watermark</strong></td>
-              <td>Stores the high-water mark for each incremental ingestion job. <code>Watermark_Value</code> (DATETIME) is updated after each successful incremental run. <code>Watermark_Column</code> identifies the source column used to filter new records.</td>
+              <td>Stores the high-water mark for each incremental ingestion job. <code>Watermark_Value</code> (DATETIME) is updated after each successful incremental run. <code>Watermark_Column</code> identifies the source column (SQL sources) or documents the time boundary concept (file-based sources).</td>
               <td><code>Watermark_Value</code>, <code>Watermark_Column</code></td>
             </tr>
           </tbody>
@@ -641,25 +733,162 @@ td code,th code{
       <h2>Runtime Execution Model</h2>
       <p>At runtime, ADF resolves all parameters from the metadata control plane. No configuration is embedded in the pipeline definition. The execution sequence for any ingestion job is identical regardless of source, target, or load pattern:</p>
       <ol>
-        <li>A <strong>scheduled or event-based trigger</strong> fires in Azure Data Factory, passing the <code>Metadata_Job</code> name as a pipeline parameter.</li>
-        <li>A <strong>Lookup activity</strong> queries <code>EDP_Metadata.MasterRef</code>, returning the complete runtime configuration — source and target connections, dataset types, file formats, column delimiters, load type, watermark state, and JSON runtime settings — in a single row.</li>
-        <li>A <strong>Switch activity</strong> evaluates the <code>SwitchCaseRef</code> value from the Lookup result to route execution to the correct Copy activity for the connector and file format combination.</li>
+        <li>A <strong>scheduled or event-based trigger</strong> fires in Azure Data Factory, passing the <code>TriggerName</code> as a pipeline parameter.</li>
+        <li>A <strong>Lookup activity</strong> queries <code>EDP_Metadata.MasterRef</code> with <code>firstRowOnly: false</code>, returning the complete runtime configuration for every active job belonging to that trigger — source and target connections, dataset types, file formats, column delimiters, load type, watermark state, and JSON runtime settings — in a single multi-row result. The Lookup dataset references the metadata Azure SQL database via ADF Global Parameters (<code>@pipeline().globalParameters.MetadataServerName</code> and <code>@pipeline().globalParameters.MetadataDatabaseName</code>).</li>
+        <li>A <strong>ForEach activity</strong> iterates over all returned rows in parallel (batch size 5), passing each job's full metadata row to the activities nested within it.</li>
+        <li>A <strong>Switch activity</strong> evaluates the <code>SwitchCaseRef</code> value from the current iteration's row to route execution to the correct activity set for the connector and file format combination.</li>
         <li>The <strong>Copy activity</strong> executes using fully dynamic ADF expressions. Container names, directory paths, filenames, SQL queries, schema and table names are all sourced from <code>MetadataSettingsInput</code> and <code>MetadataSettingsOutput</code> JSON at runtime — nothing is hardcoded in the pipeline definition.</li>
-        <li>For <strong>Incremental</strong> jobs: <code>Watermark_Column</code> and the current <code>Watermark_Value</code> are applied as a source-side filter. On successful completion, <code>Watermark_Value</code> is updated to the current high-water mark.</li>
+        <li>For <strong>Incremental</strong> jobs: the watermark boundary is applied as a source-side filter before the copy. After a successful copy that transfers at least one row (or file), the <code>Watermark_Value</code> is updated to <code>UTC now</code> via a Script activity against the metadata database. If the copy transfers zero rows, the watermark is intentionally <em>not</em> advanced — ensuring the same time window is retried on the next run.</li>
       </ol>
     </section>
 
-    <!-- ── 06 Load Patterns ──────────────────────────────────── -->
+    <!-- ── 06 Pipeline Catalog ───────────────────────────────── -->
+    <section id="catalog">
+      <div class="section-label">06 — Deployed Pipelines</div>
+      <h2>Pipeline Catalog</h2>
+      <p>Four generic pipelines are deployed in <code>adfclaude01</code>. Each pipeline is driven entirely by metadata — no source-specific logic exists in any pipeline definition. The only pipeline-level parameter is <code>TriggerName</code>, which scopes the Lookup to the correct set of jobs.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Pipeline</th><th>Source</th><th>Target</th><th>Load Type</th><th>Switch Cases</th><th>ForEach Activities</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PL_ASQL_ADLS_FULL_INGRESS</code></td>
+              <td>Azure SQL</td>
+              <td>ADLS Gen2</td>
+              <td><span class="badge">Full Refresh</span></td>
+              <td>3</td>
+              <td>1 Copy per case</td>
+            </tr>
+            <tr>
+              <td><code>PL_ASQL_ADLS_INCREMENTAL_INGRESS</code></td>
+              <td>Azure SQL</td>
+              <td>ADLS Gen2</td>
+              <td><span class="badge accent">Incremental</span></td>
+              <td>3</td>
+              <td>5 per case (Validate + Fail or Copy + Check + Update)</td>
+            </tr>
+            <tr>
+              <td><code>PL_ADLS_ADLS_FULL_INGRESS</code></td>
+              <td>ADLS Gen2</td>
+              <td>ADLS Gen2</td>
+              <td><span class="badge">Full Refresh</span></td>
+              <td>28</td>
+              <td>1 Copy per case</td>
+            </tr>
+            <tr>
+              <td><code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code></td>
+              <td>ADLS Gen2</td>
+              <td>ADLS Gen2</td>
+              <td><span class="badge accent">Incremental</span></td>
+              <td>28</td>
+              <td>5 per original case; 3 per compressed/binary case</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>ADLS Pipeline Switch Cases (28 total)</h3>
+      <p>The ADLS-to-ADLS pipelines cover all source-format-to-target-format combinations, including compressed source variants and binary pass-through:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Source Format</th><th>Target Formats</th><th>Case Count</th><th>Source Dataset</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>CSV (uncompressed)</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_CSV</code></td></tr>
+            <tr><td>Parquet (uncompressed)</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_PARQUET</code></td></tr>
+            <tr><td>JSON (uncompressed)</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_JSON</code></td></tr>
+            <tr><td>GZIP-compressed CSV</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_GZIP_CSV</code></td></tr>
+            <tr><td>ZIP-compressed CSV</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_ZIP_CSV</code></td></tr>
+            <tr><td>TarGzip CSV</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_TARGZIP_CSV</code></td></tr>
+            <tr><td>GZIP-compressed JSON</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_GZIP_JSON</code></td></tr>
+            <tr><td>ZIP-compressed JSON</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_ZIP_JSON</code></td></tr>
+            <tr><td>TarGzip JSON</td><td>CSV, Parquet, JSON</td><td>3</td><td><code>DS_ADLS_TARGZIP_JSON</code></td></tr>
+            <tr><td>Binary (any)</td><td>Binary</td><td>1</td><td><code>DS_ADLS_BINARY</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>Compressed source design (Scenario A):</strong> Each compression type gets its own dedicated dataset with the compression codec baked in (e.g. <code>compressionCodec: "gzip"</code>). ADF decompresses transparently at read time. This approach leaves existing uncompressed datasets untouched and gives each format/compression variant a clean, unique identity in the SwitchCaseRef routing table.
+      </div>
+    </section>
+
+    <!-- ── 07 Datasets & Global Parameters ───────────────────── -->
+    <section id="datasets">
+      <div class="section-label">07 — Datasets &amp; Configuration</div>
+      <h2>Datasets &amp; Global Parameters</h2>
+
+      <h3>Deployed ADF Datasets</h3>
+      <p>All datasets use parameterized linked services — connection details (server, database, storage URL) are resolved from <code>LinkedServiceConnectionString</code> JSON in the metadata at runtime. No connection detail is hardcoded in any dataset definition.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Dataset</th><th>ADF Type</th><th>Format</th><th>Compression</th><th>Linked Service</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>DS_ASQL_TABLE</code></td><td>AzureSqlTable</td><td>TABLE (no file format)</td><td>—</td><td><code>LS_ASQL_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_CSV</code></td><td>DelimitedText</td><td>CSV</td><td>None</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_PARQUET</code></td><td>Parquet</td><td>Parquet</td><td>None</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_JSON</code></td><td>Json</td><td>JSON</td><td>None</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_GZIP_CSV</code></td><td>DelimitedText</td><td>CSV</td><td>gzip</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_ZIP_CSV</code></td><td>DelimitedText</td><td>CSV</td><td>ZipDeflate</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_TARGZIP_CSV</code></td><td>DelimitedText</td><td>CSV</td><td>TarGzip</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_GZIP_JSON</code></td><td>Json</td><td>JSON</td><td>gzip</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_ZIP_JSON</code></td><td>Json</td><td>JSON</td><td>ZipDeflate</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_TARGZIP_JSON</code></td><td>Json</td><td>JSON</td><td>TarGzip</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_ADLS_BINARY</code></td><td>Binary</td><td>Any binary</td><td>None (pass-through)</td><td><code>LS_ADLS_SAMI</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>ADF Global Parameters</h3>
+      <p>Factory-level parameters shared across all pipelines are managed as ADF Global Parameters rather than duplicated pipeline-level parameters. This ensures a single configuration point: updating the metadata server or database name requires one change at the factory level, not across every pipeline definition.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Global Parameter</th><th>Type</th><th>Value</th><th>Referenced As</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>MetadataServerName</code></td>
+              <td>String</td>
+              <td><code>asqlserverclaude01.database.windows.net</code></td>
+              <td><code>@pipeline().globalParameters.MetadataServerName</code></td>
+            </tr>
+            <tr>
+              <td><code>MetadataDatabaseName</code></td>
+              <td>String</td>
+              <td><code>asqlclaude01</code></td>
+              <td><code>@pipeline().globalParameters.MetadataDatabaseName</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        All four deployed pipelines (<code>PL_ASQL_ADLS_FULL_INGRESS</code>, <code>PL_ASQL_ADLS_INCREMENTAL_INGRESS</code>, <code>PL_ADLS_ADLS_FULL_INGRESS</code>, <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code>) reference these global parameters. The only remaining pipeline-level parameter across all four is <code>TriggerName</code>, which scopes the Lookup query to the correct set of active jobs.
+      </div>
+    </section>
+
+    <!-- ── 08 Load Patterns ──────────────────────────────────── -->
     <section id="load-patterns">
-      <div class="section-label">06 — Load Patterns</div>
+      <div class="section-label">08 — Load Patterns</div>
       <h2>Load Patterns</h2>
       <p>The framework supports two load patterns, controlled by the <code>Load_Type</code> flag on <code>MetadataRef</code>. Both patterns flow through the same generic ADF pipeline — the metadata determines the behaviour.</p>
 
-      <h3>Full Refresh &nbsp;<span class="badge" style="vertical-align:middle">Load_Type = 0</span></h3>
+      <h3>Full Refresh &nbsp;<span class="badge" style="vertical-align:middle">Load_Type = Full_Refresh</span></h3>
       <p>The entire dataset is read from source and written to the target on each run. Used for reference data, small dimension tables, or sources where change tracking is not available or required.</p>
       <ul>
         <li><code>Watermark_ID</code> is <code>NULL</code> — no high-water mark is maintained.</li>
         <li>No source-side filter is applied; all records are copied on every run.</li>
+        <li>Each Switch case contains a single Copy activity. No watermark validation or update activities are needed.</li>
         <li>Pipeline name carries the <code>FULL</code> suffix.</li>
       </ul>
       <div class="flow">
@@ -667,37 +896,38 @@ td code,th code{
         <div class="flow-arrow">→</div>
         <div class="flow-step">Lookup MasterRef</div>
         <div class="flow-arrow">→</div>
+        <div class="flow-step">ForEach (parallel)</div>
+        <div class="flow-arrow">→</div>
         <div class="flow-step">Switch on SwitchCaseRef</div>
         <div class="flow-arrow">→</div>
         <div class="flow-step">Copy all rows</div>
         <div class="flow-arrow">→</div>
-        <div class="flow-step">Target refreshed</div>
+        <div class="flow-step ok-step">Target refreshed</div>
       </div>
 
-      <h3>Incremental / Delta &nbsp;<span class="badge accent" style="vertical-align:middle">Load_Type = 1</span></h3>
-      <p>Only records added or changed since the last successful run are copied. The high-water mark is maintained in the <code>Watermark</code> table and updated after each successful load. Suited to large transactional datasets where a full reload on each run is not practical.</p>
+      <h3>Incremental / Delta &nbsp;<span class="badge accent" style="vertical-align:middle">Load_Type = Incremental</span></h3>
+      <p>Only records added or changed since the last successful run are copied. The high-water mark is maintained in the <code>Watermark</code> table and updated after each successful load that transfers at least one record. Suited to large transactional datasets where a full reload on each run is not practical.</p>
       <ul>
         <li><code>Watermark_ID</code> references a row in the <code>Watermark</code> table.</li>
-        <li><code>Watermark_Column</code> identifies the datetime column used to filter new records at the source.</li>
-        <li><code>Watermark_Value</code> holds the last successfully loaded datetime boundary.</li>
-        <li>Source query is filtered: records where <code>{Watermark_Column} &gt; {last Watermark_Value}</code> are retrieved.</li>
-        <li>After a successful copy, <code>Watermark_Value</code> is updated to the current boundary.</li>
-        <li>Pipeline name carries the <code>Delta</code> suffix.</li>
+        <li><strong>For SQL sources:</strong> <code>Watermark_Column</code> identifies the datetime column on the source table. The source query wraps the user-supplied query with <code>WHERE {Watermark_Column} &gt; '{Watermark_Value}'</code>.</li>
+        <li><strong>For file-based sources (ADLS):</strong> The <code>modifiedDatetimeStart</code> property in <code>AzureBlobFSReadSettings</code> filters files by last-modified timestamp. <code>Watermark_Column</code> serves as a documentation label only.</li>
+        <li>After a successful copy that transfers data, a Script activity updates <code>Watermark_Value</code> to <code>UTC now</code> in the metadata database.</li>
+        <li>Pipeline name carries the <code>INCREMENTAL</code> suffix.</li>
       </ul>
       <div class="flow">
         <div class="flow-step">Trigger fires</div>
         <div class="flow-arrow">→</div>
         <div class="flow-step">Lookup MasterRef + Watermark</div>
         <div class="flow-arrow">→</div>
+        <div class="flow-step">Validate Watermark</div>
+        <div class="flow-arrow">→</div>
         <div class="flow-step">Filter source by Watermark</div>
         <div class="flow-arrow">→</div>
         <div class="flow-step">Copy delta rows</div>
         <div class="flow-arrow">→</div>
-        <div class="flow-step">Update Watermark_Value</div>
-      </div>
-
-      <div class="callout warn">
-        <strong>Note:</strong> The Watermark tracking infrastructure — the <code>Watermark</code> table, its foreign key to <code>MetadataRef</code>, and the <code>Watermark_Value</code> / <code>Watermark_Column</code> columns exposed by the <code>MasterRef</code> view — is fully in place. Incremental pipeline execution logic is designed and pipeline implementation is in progress.
+        <div class="flow-step">Check rows &gt; 0</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step ok-step">Update Watermark_Value</div>
       </div>
 
       <h3>Activity Direction</h3>
@@ -708,12 +938,12 @@ td code,th code{
           </thead>
           <tbody>
             <tr>
-              <td><span class="badge">0 — Ingress</span></td>
+              <td><span class="badge">Ingress</span></td>
               <td>Source system → Data platform</td>
               <td>Pulling data from source systems into the landing or staging zone</td>
             </tr>
             <tr>
-              <td><span class="badge accent">1 — Egress</span></td>
+              <td><span class="badge accent">Egress</span></td>
               <td>Data platform → Consumer</td>
               <td>Pushing processed data from the platform to downstream consumers or targets</td>
             </tr>
@@ -722,47 +952,194 @@ td code,th code{
       </div>
     </section>
 
-    <!-- ── 07 Naming Conventions ─────────────────────────────── -->
+    <!-- ── 09 Incremental Pipeline Resilience ───────────────── -->
+    <section id="resilience">
+      <div class="section-label danger">09 — Failure &amp; Edge Cases</div>
+      <h2 class="danger-h2">Incremental Pipeline Resilience</h2>
+      <p>The incremental pipelines implement multiple defensive patterns to handle edge cases that would otherwise result in silent data loss, incorrect watermark advancement, or hard-to-diagnose failures. Each guard is implemented as a discrete ADF activity with explicit dependency conditions.</p>
+
+      <div class="callout danger">
+        <strong>Why these guards matter:</strong> Without them, a pipeline could advance the watermark on a failed copy (losing the retry window), silently advance on an empty result (masking a missing data issue), or run indefinitely with a null watermark (copying all records on every run with no filtering). Each scenario below has been considered and explicitly handled.
+      </div>
+
+      <div class="edge-case-grid">
+
+        <!-- Guard 1 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">WM001</span>
+            <span class="edge-case-title">Null Watermark Validation</span>
+            <span class="badge warn" style="margin-left:auto">Guard</span>
+          </div>
+          <p><strong>Risk:</strong> If <code>Watermark_Column</code> or <code>Watermark_Value</code> is null in the metadata, the incremental source filter cannot be constructed. The copy would proceed unfiltered, loading the entire source on every run — identical to a full refresh but without the watermark update, silently corrupting the incremental state.</p>
+          <p><strong>Implementation:</strong> An <code>IfCondition</code> activity (<em>Validate_Watermark</em>) evaluates:</p>
+          <div class="code-block">@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))</div>
+          <p>If the condition is true (either field is null), a <em>Fail</em> activity fires immediately, halting the pipeline run with error code <strong>WM001</strong> and a message identifying the <code>Metadata_Job</code> and <code>Metadata_ID</code>. The Copy activity never executes.</p>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> All 3 ASQL incremental cases &nbsp;|&nbsp; Original 9 uncompressed ADLS incremental cases &nbsp;|&nbsp; <em>Not applied</em> to 19 compressed/binary ADLS cases (activity limit constraint — see below)
+          </div>
+        </div>
+
+        <!-- Guard 2 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">ZR001</span>
+            <span class="edge-case-title">Zero-Rows / Zero-Files Guard</span>
+            <span class="badge warn" style="margin-left:auto">Guard</span>
+          </div>
+          <p><strong>Risk:</strong> If the watermark-filtered source query returns zero rows (e.g. no new records since the last run, or a temporary data gap), advancing the watermark would shift the time boundary forward — potentially causing the next run to miss records that arrive late but within the original window.</p>
+          <p><strong>Implementation:</strong> An <code>IfCondition</code> activity (<em>Check_Rows_Copied</em>) evaluates the Copy activity's output metric after the copy completes:</p>
+          <div class="code-block">/* Standard format cases (CSV, Parquet, JSON): */
+@greater(activity('Copy_...').output.rowsCopied, 0)
+
+/* Binary case: */
+@greater(activity('Copy_ADLS_BINARY_to_ADLS_BINARY').output.filesRead, 0)</div>
+          <p>The <em>Update_Watermark</em> Script activity is nested in the <code>ifTrue</code> branch only. If zero rows (or zero files) were transferred, the watermark is not advanced and the same time window is retried on the next run.</p>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> All 28 cases in both ADLS incremental and all 3 ASQL incremental cases &nbsp;|&nbsp; Binary case uses <code>filesRead</code>; all other cases use <code>rowsCopied</code>
+          </div>
+        </div>
+
+        <!-- Guard 3 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">CF001</span>
+            <span class="edge-case-title">Copy Failure Guard</span>
+            <span class="badge warn" style="margin-left:auto">Guard</span>
+          </div>
+          <p><strong>Risk:</strong> If the Copy activity fails mid-run (network error, schema mismatch, throttling, etc.), a watermark update that runs regardless would lock the pipeline into a future time window — permanently skipping all records from the failed run's interval.</p>
+          <p><strong>Implementation:</strong> The <em>Check_Rows_Copied</em> (<code>IfCondition</code>) activity has an explicit dependency on the Copy activity with condition <strong>Succeeded</strong>. If the Copy fails, the <code>IfCondition</code> — and therefore the <em>Update_Watermark</em> Script activity — is skipped entirely. The watermark remains at the last known good boundary, ensuring the next retry re-processes the same time window.</p>
+          <div class="code-block">/* Dependency condition on Check_Rows_Copied: */
+"dependsOn": [{ "activity": "Copy_...", "dependencyConditions": ["Succeeded"] }]</div>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> All 28 cases in both ADLS incremental and all 3 ASQL incremental cases
+          </div>
+        </div>
+
+        <!-- Guard 4 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">FW001</span>
+            <span class="edge-case-title">ADLS File-Modification Watermark</span>
+            <span class="badge accent" style="margin-left:auto">Design</span>
+          </div>
+          <p><strong>Challenge:</strong> File-based sources on ADLS Gen2 have no SQL column that can be used to filter rows by a watermark value. The standard SQL approach (<code>WHERE column &gt; value</code>) cannot be applied to files.</p>
+          <p><strong>Implementation:</strong> ADF's native <code>modifiedDatetimeStart</code> setting in <code>AzureBlobFSReadSettings</code> is used to filter files by their last-modified timestamp. Only files modified on or after the watermark boundary are included in the copy:</p>
+          <div class="code-block">"storeSettings": {
+    "type": "AzureBlobFSReadSettings",
+    "modifiedDatetimeStart": {
+        "value": "@formatDateTime(item().Watermark_Value, 'yyyy-MM-ddTHH:mm:ss')",
+        "type": "Expression"
+    }
+}</div>
+          <p><code>Watermark_Column</code> in the metadata row for file-based sources acts as a human-readable documentation label (e.g. <code>FileModifiedDate</code>) and is <strong>not used</strong> in the ADF filter expression. Only <code>Watermark_Value</code> is consumed at runtime.</p>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> All 28 cases in <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> &nbsp;|&nbsp; Not applicable to ASQL incremental (SQL column filter used instead)
+          </div>
+        </div>
+
+        <!-- Guard 5 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">BN001</span>
+            <span class="edge-case-title">Binary File Metric Substitution</span>
+            <span class="badge accent" style="margin-left:auto">Design</span>
+          </div>
+          <p><strong>Challenge:</strong> ADF's Binary Copy activities do not report <code>rowsCopied</code> — binary transfers report <code>filesRead</code> and <code>filesWritten</code> instead. Using the standard <code>rowsCopied</code> metric for the zero-rows guard would always evaluate to zero, causing the watermark to never advance for binary jobs.</p>
+          <p><strong>Implementation:</strong> The binary incremental case uses <code>filesRead</code> in the <em>Check_Files_Read</em> guard condition:</p>
+          <div class="code-block">@greater(activity('Copy_ADLS_BINARY_to_ADLS_BINARY').output.filesRead, 0)</div>
+          <p>The Update_Watermark Script activity is otherwise identical to all other incremental cases — only the guard metric differs.</p>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> Binary-to-binary switch case only (<code>SW_ADLS_SAMI_BINARY_ADLS_SAMI_BINARY</code>) in <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code>
+          </div>
+        </div>
+
+        <!-- Guard 6 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">AL001</span>
+            <span class="edge-case-title">ADF 120-Activity Limit Workaround</span>
+            <span class="badge warn" style="margin-left:auto">Constraint</span>
+          </div>
+          <p><strong>Constraint:</strong> Azure Data Factory enforces a hard limit of <strong>120 nested activities</strong> per pipeline. All activities at every nesting level — including activities inside <code>IfCondition</code> branches and Switch cases — count toward this total.</p>
+          <p><strong>Problem:</strong> <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> needed 28 Switch cases. Applying the full 5-activity pattern (Validate_Watermark + Fail + Copy + Check + Update) to all 28 cases would yield 143 activities total (28 × 5 + 3 = 143), exceeding the limit.</p>
+          <p><strong>Solution:</strong> The 19 compressed and binary cases use a simplified <strong>3-activity pattern</strong> (Copy + Check + Update), omitting the Validate_Watermark guard. The 9 original uncompressed cases retain the full 5-activity pattern:</p>
+          <div class="code-block">9 original cases  x  5 activities  =   45
+19 compressed/binary cases  x  3 activities  =   57
+3 outer activities (Lookup + ForEach + Switch)  =    3
+Total                                          = 105  (within limit)</div>
+          <p>The risk of omitting Validate_Watermark for the 19 new cases is accepted: metadata configuration quality controls (referential integrity in the Watermark table) should prevent null watermark states from occurring in practice. This constraint is documented here for operational awareness.</p>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> only &nbsp;|&nbsp; No constraint on other pipelines (105 / 120 activities used)
+          </div>
+        </div>
+
+      </div>
+
+      <h3>Watermark Update — Script Activity</h3>
+      <p>When the zero-rows guard confirms data was transferred, the watermark is advanced using a Script activity connected to <code>LS_ASQL_SAMI</code> (the metadata database linked service). The SQL script updates the <code>Watermark</code> table via a join to <code>MetadataRef</code> using the current iteration's <code>Metadata_ID</code>:</p>
+      <div class="code-block">UPDATE w
+SET    w.Watermark_Value = CONVERT(DATETIME, '&lt;utcNow formatted yyyy-MM-dd HH:mm:ss&gt;')
+FROM   EDP_Metadata.Watermark w
+JOIN   EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID
+WHERE  m.Metadata_ID = &lt;item().Metadata_ID&gt;</div>
+      <p>The script uses a <code>NonQuery</code> command type and all values — the UTC timestamp and Metadata_ID — are dynamically resolved via ADF expressions. No watermark coordinates are hardcoded in the pipeline definition.</p>
+    </section>
+
+    <!-- ── 10 Naming Conventions ─────────────────────────────── -->
     <section id="naming">
-      <div class="section-label">07 — Conventions</div>
+      <div class="section-label">10 — Conventions</div>
       <h2>Naming Conventions</h2>
       <p>All ADF artifact names are derived from metadata, not manually assigned. The <code>MasterRef</code> view computes pipeline names and switch case references at runtime from the source, target, load type, and connector combination registered in the reference tables.</p>
 
       <h3>Pipeline Name</h3>
-      <div class="code-block">PL_{InputSource}_{OutputSource}_{FULL|Delta}_{INGRESS|EGRESS}
+      <div class="code-block">PL_{InputSource}_{OutputSource}_{FULL|INCREMENTAL}_{INGRESS|EGRESS}
 
 Examples:
-  PL_ADLS_ADLS_FULL_INGRESS      Full refresh, ADLS Gen2 source to ADLS Gen2 target
-  PL_ASQL_ADLS_Delta_INGRESS     Incremental, Azure SQL source to ADLS Gen2 target
-  PL_SFTP_ADLS_FULL_INGRESS      Full refresh, SFTP source to ADLS Gen2 target</div>
+  PL_ASQL_ADLS_FULL_INGRESS          Full refresh, Azure SQL source to ADLS Gen2 target
+  PL_ASQL_ADLS_INCREMENTAL_INGRESS   Incremental, Azure SQL source to ADLS Gen2 target
+  PL_ADLS_ADLS_FULL_INGRESS          Full refresh, ADLS Gen2 source to ADLS Gen2 target
+  PL_ADLS_ADLS_INCREMENTAL_INGRESS   Incremental, ADLS Gen2 source to ADLS Gen2 target
+  PL_SFTP_ADLS_FULL_INGRESS          Full refresh, SFTP source to ADLS Gen2 target</div>
 
       <h3>Dataset Name</h3>
       <div class="code-block">DS_{Source_Ref}_{Format}
 
 Examples:
-  DS_ADLS_PARQUET    ADLS Gen2 with Parquet format
-  DS_ADLS_CSV        ADLS Gen2 with CSV format
-  DS_ASQL_TABLE      Azure SQL — table-based, no file format
-  DS_SFTP_ZIP        SFTP with ZIP format</div>
+  DS_ADLS_PARQUET        ADLS Gen2 with Parquet format (uncompressed)
+  DS_ADLS_CSV            ADLS Gen2 with CSV format (uncompressed)
+  DS_ADLS_GZIP_CSV       ADLS Gen2 with CSV format, GZIP compressed
+  DS_ADLS_ZIP_CSV        ADLS Gen2 with CSV format, ZIP (ZipDeflate) compressed
+  DS_ADLS_TARGZIP_CSV    ADLS Gen2 with CSV format, TarGzip compressed
+  DS_ADLS_GZIP_JSON      ADLS Gen2 with JSON format, GZIP compressed
+  DS_ADLS_BINARY         ADLS Gen2, binary pass-through (no format parsing)
+  DS_ASQL_TABLE          Azure SQL -- table-based, no file format</div>
 
       <h3>Linked Service Name</h3>
       <div class="code-block">LS_{Source_Ref}_{Auth_Ref}
 
 Examples:
   LS_ADLS_SAMI       ADLS Gen2 with System-Assigned Managed Identity
-  LS_ASQL_SAMI       Azure SQL with System-Assigned Managed Identity
+  LS_ASQL_SAMI       Azure SQL with System-Assigned Managed Identity (v2.0 -- serverName + databaseName)
   LS_SFTP_BASIC      SFTP with Basic (username / password) authentication</div>
 
       <h3>Switch Case Reference</h3>
       <div class="code-block">SW_{InputLinkedService}_{InputFormat}_{OutputLinkedService}_{OutputFormat}
 
-Computed by MasterRef to uniquely identify each source/target/format combination.
+Where LinkedService = linked service name with leading "LS_" removed.
+
+Examples:
+  SW_ASQL_SAMI_TABLE_ADLS_SAMI_CSV         Azure SQL -> ADLS CSV
+  SW_ADLS_SAMI_GZIP_CSV_ADLS_SAMI_PARQUET  ADLS GZIP-CSV source -> ADLS Parquet
+  SW_ADLS_SAMI_BINARY_ADLS_SAMI_BINARY     ADLS binary pass-through
+
+Computed by MasterRef at runtime to uniquely identify each source/target/format combination.
 Used by the ADF Switch activity to route to the correct Copy activity.</div>
     </section>
 
-    <!-- ── 08 Design Principles ──────────────────────────────── -->
+    <!-- ── 11 Design Principles ──────────────────────────────── -->
     <section id="design-principles">
-      <div class="section-label">08 — Design</div>
+      <div class="section-label">11 — Design</div>
       <h2>Design Principles</h2>
 
       <div class="principles-grid">
@@ -791,6 +1168,10 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
           <p>Every row in <code>MetadataRef</code> carries <code>Created_Date</code>, <code>Modified_Date</code>, and <code>Modified_By</code> — populated automatically by database defaults. Configuration change history is inherent to the data model, not an afterthought.</p>
         </div>
         <div class="principle-card">
+          <div class="principle-title">Defensive Incremental Loading</div>
+          <p>Incremental pipelines implement multiple explicit guards: null watermark validation, zero-rows checks before advancing the boundary, and Copy Succeeded dependency conditions on watermark updates. Watermarks are never advanced on failure or empty results.</p>
+        </div>
+        <div class="principle-card">
           <div class="principle-title">Extensibility</div>
           <p>Adding a new data source, file format, or authentication type requires only inserting reference rows into the appropriate lookup tables. The generic pipeline accommodates new source/target combinations without any pipeline modification.</p>
         </div>
@@ -801,9 +1182,9 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
       </div>
     </section>
 
-    <!-- ── 09 Data Fabric Alignment ──────────────────────────── -->
+    <!-- ── 12 Data Fabric Alignment ──────────────────────────── -->
     <section id="data-fabric">
-      <div class="section-label">09 — Governance</div>
+      <div class="section-label">12 — Governance</div>
       <h2>Data Fabric Alignment</h2>
       <p>The framework aligns with several foundational principles of modern Data Fabric architecture, specifically those concerned with active metadata management, unified cataloguing, and governed connectivity.</p>
 
@@ -842,9 +1223,9 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
       </div>
     </section>
 
-    <!-- ── 10 Benefits ───────────────────────────────────────── -->
+    <!-- ── 13 Benefits ───────────────────────────────────────── -->
     <section id="benefits">
-      <div class="section-label">10 — Value</div>
+      <div class="section-label">13 — Value</div>
       <h2>Benefits</h2>
 
       <h3>Operational</h3>
@@ -854,6 +1235,7 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
         <div class="benefit-item">Connection and path changes applied in metadata — no pipeline redeployment cycle</div>
         <div class="benefit-item">Full visibility of all active ingestion jobs by querying a single control table</div>
         <div class="benefit-item">Consistent pipeline behaviour across all sources — one proven pattern, not hundreds of variations</div>
+        <div class="benefit-item">Factory-level parameters (server, database) managed in one place via ADF Global Parameters</div>
       </div>
 
       <h3>Engineering</h3>
@@ -861,16 +1243,19 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
         <div class="benefit-item">Dramatically reduced pipeline maintenance surface — one generic pipeline replaces one-per-source</div>
         <div class="benefit-item">Environment portability — the same pipelines run across dev, test, and production with different metadata records</div>
         <div class="benefit-item">Full Refresh and Incremental patterns supported from a single framework with no pipeline duplication</div>
+        <div class="benefit-item">Compressed source files (GZIP, ZIP, TarGzip) and binary pass-through handled via dedicated datasets — no pipeline changes required</div>
         <div class="benefit-item">Enforced naming conventions enable automated tooling, monitoring dashboards, and documentation generation</div>
         <div class="benefit-item">Idempotent DDL supports safe schema deployment and controlled schema evolution across environments</div>
       </div>
 
-      <h3>Governance</h3>
+      <h3>Resilience &amp; Governance</h3>
       <div class="benefits-grid">
+        <div class="benefit-item">Null watermark guard (WM001) prevents unfiltered full-table reads on misconfigured incremental jobs</div>
+        <div class="benefit-item">Zero-rows guard ensures watermark is only advanced when data was actually transferred</div>
+        <div class="benefit-item">Copy failure dependency ensures watermark is never advanced on a failed run — retry picks up from the same boundary</div>
         <div class="benefit-item">Audit trail on every ingestion job — who configured what, and when</div>
         <div class="benefit-item">Business domain classification on every job — supports data lineage and ownership tracking</div>
-        <div class="benefit-item">Centralised, catalogued connection management — no unregistered or shadow connections</div>
-        <div class="benefit-item">Watermark state managed centrally — incremental load boundaries are visible and auditable</div>
+        <div class="benefit-item">Centralised watermark state — incremental load boundaries are visible and auditable across all jobs</div>
       </div>
     </section>
 
@@ -887,11 +1272,11 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
           <tbody>
             <tr><td><code>EDP_Metadata.MetadataRef</code></td><td>Table</td><td>Core control table — one row per ingestion job</td><td>Primary config store; queried via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.MasterRef</code></td><td>View</td><td>Denormalized runtime view over MetadataRef and all lookup tables; derives Pipeline_Name and SwitchCaseRef</td><td>Target of the Lookup activity</td></tr>
-            <tr><td><code>EDP_Metadata.Watermark</code></td><td>Table</td><td>High-water mark per incremental job; updated after each successful run</td><td>Read and written by incremental pipeline</td></tr>
-            <tr><td><code>EDP_Metadata.DatasetRef</code></td><td>Table</td><td>Unique Source + FileFormat combinations</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.Watermark</code></td><td>Table</td><td>High-water mark per incremental job; updated after each successful run that transfers data</td><td>Read by Lookup via MasterRef; written by Update_Watermark Script activity</td></tr>
+            <tr><td><code>EDP_Metadata.DatasetRef</code></td><td>Table</td><td>Unique Source + FileFormat combinations, including compressed variants</td><td>Resolved via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.LinkedServiceRef</code></td><td>Table</td><td>ADF linked service catalog with JSON connection templates</td><td>Resolved via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.SourceRef</code></td><td>Table</td><td>Supported data source types and short codes</td><td>Resolved via MasterRef</td></tr>
-            <tr><td><code>EDP_Metadata.FileFormat</code></td><td>Table</td><td>Supported file formats</td><td>Resolved via MasterRef</td></tr>
+            <tr><td><code>EDP_Metadata.FileFormat</code></td><td>Table</td><td>Supported file formats including compression variants</td><td>Resolved via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.SystemAuth</code></td><td>Table</td><td>Supported authentication types and applicable connectors</td><td>Resolved via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.BusinessDomainRef</code></td><td>Table</td><td>Business domain classification</td><td>Resolved via MasterRef</td></tr>
             <tr><td><code>EDP_Metadata.colDelimitterRef</code></td><td>Table</td><td>Column delimiter reference values</td><td>Resolved via MasterRef</td></tr>
@@ -901,7 +1286,7 @@ Used by the ADF Switch activity to route to the correct Copy activity.</div>
     </section>
 
     <div class="doc-footer">
-      Enterprise Data Platform — Metadata-Driven Ingestion Framework &nbsp;·&nbsp; Version 1.0 &nbsp;·&nbsp; August 2026 &nbsp;·&nbsp; Internal Use Only
+      Enterprise Data Platform &nbsp;&middot;&nbsp; Metadata-Driven Ingestion Framework &nbsp;&middot;&nbsp; Version 2.0 &nbsp;&middot;&nbsp; August 2026 &nbsp;&middot;&nbsp; Internal Use Only
     </div>
 
   </main>
