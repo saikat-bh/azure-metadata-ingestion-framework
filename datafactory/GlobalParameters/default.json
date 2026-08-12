@@ -1,0 +1,14 @@
+{
+    "name": "default",
+    "type": "Microsoft.DataFactory/factories/globalParameters",
+    "properties": {
+        "MetadataServerName": {
+            "type": "String",
+            "value": "asqlserverclaude01.database.windows.net"
+        },
+        "MetadataDatabaseName": {
+            "type": "String",
+            "value": "asqlclaude01"
+        }
+    }
+}

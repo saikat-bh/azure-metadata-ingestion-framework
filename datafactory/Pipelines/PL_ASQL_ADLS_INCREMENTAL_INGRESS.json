@@ -1,18 +1,10 @@
-{
+﻿{
     "name": "PL_ASQL_ADLS_INCREMENTAL_INGRESS",
     "type": "Microsoft.DataFactory/factories/pipelines",
     "properties": {
         "description": "Incremental (delta) ingestion pipeline from Azure SQL to ADLS Gen2. Reads all active Incremental Ingress jobs for the given trigger from EDP_Metadata.MasterRef. Watermark column and last high-water mark value are resolved from metadata at runtime. Watermark is only advanced on confirmed successful copy with at least one row transferred. Parallel processing via ForEach (batchCount=5).",
         "parameters": {
             "TriggerName": {
-                "type": "string",
-                "defaultValue": ""
-            },
-            "MetadataServerName": {
-                "type": "string",
-                "defaultValue": ""
-            },
-            "MetadataDatabaseName": {
                 "type": "string",
                 "defaultValue": ""
             }
@@ -45,11 +37,11 @@
                         "type": "DatasetReference",
                         "parameters": {
                             "serverName": {
-                                "value": "@pipeline().parameters.MetadataServerName",
+                                "value": "@pipeline().globalParameters.MetadataServerName",
                                 "type": "Expression"
                             },
                             "databaseName": {
-                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "value": "@pipeline().globalParameters.MetadataDatabaseName",
                                 "type": "Expression"
                             }
                         }
@@ -233,11 +225,11 @@
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
                                                                                 "serverName": {
-                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataServerName",
                                                                                     "type": "Expression"
                                                                                 },
                                                                                 "databaseName": {
-                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataDatabaseName",
                                                                                     "type": "Expression"
                                                                                 }
                                                                             }
@@ -396,11 +388,11 @@
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
                                                                                 "serverName": {
-                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataServerName",
                                                                                     "type": "Expression"
                                                                                 },
                                                                                 "databaseName": {
-                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataDatabaseName",
                                                                                     "type": "Expression"
                                                                                 }
                                                                             }
@@ -559,11 +551,11 @@
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
                                                                                 "serverName": {
-                                                                                    "value": "@pipeline().parameters.MetadataServerName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataServerName",
                                                                                     "type": "Expression"
                                                                                 },
                                                                                 "databaseName": {
-                                                                                    "value": "@pipeline().parameters.MetadataDatabaseName",
+                                                                                    "value": "@pipeline().globalParameters.MetadataDatabaseName",
                                                                                     "type": "Expression"
                                                                                 }
                                                                             }

@@ -1,18 +1,10 @@
-{
+﻿{
     "name": "PL_ADLS_ADLS_FULL_INGRESS",
     "type": "Microsoft.DataFactory/factories/pipelines",
     "properties": {
         "description": "Full refresh ingestion pipeline from ADLS Gen2 to ADLS Gen2. Reads all active Full Refresh Ingress jobs for the given trigger from EDP_Metadata.MasterRef. Switch routes each job to the correct Copy activity based on the source and target file format combination (CSV, Parquet, JSON). All 9 format-to-format combinations are covered. Parallel processing via ForEach (batchCount=5).",
         "parameters": {
             "TriggerName": {
-                "type": "string",
-                "defaultValue": ""
-            },
-            "MetadataServerName": {
-                "type": "string",
-                "defaultValue": ""
-            },
-            "MetadataDatabaseName": {
                 "type": "string",
                 "defaultValue": ""
             }
@@ -45,11 +37,11 @@
                         "type": "DatasetReference",
                         "parameters": {
                             "serverName": {
-                                "value": "@pipeline().parameters.MetadataServerName",
+                                "value": "@pipeline().globalParameters.MetadataServerName",
                                 "type": "Expression"
                             },
                             "databaseName": {
-                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "value": "@pipeline().globalParameters.MetadataDatabaseName",
                                 "type": "Expression"
                             }
                         }
