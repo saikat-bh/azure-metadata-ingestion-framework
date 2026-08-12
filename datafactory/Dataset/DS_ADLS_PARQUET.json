@@ -1,0 +1,39 @@
+{
+    "name": "DS_ADLS_PARQUET",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "Parquet",
+        "description": "Parameterized Parquet dataset on ADLS Gen2. Storage URL, container, directory, and filename are resolved at runtime from EDP_Metadata via the pipeline Lookup activity.",
+        "parameters": {
+            "URL": {
+                "type": "String"
+            },
+            "container": {
+                "type": "String"
+            },
+            "directory": {
+                "type": "String"
+            },
+            "filename": {
+                "type": "String"
+            }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": {
+                "URL": "@dataset().URL"
+            }
+        },
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "@dataset().container",
+                "folderPath": "@dataset().directory",
+                "fileName": "@dataset().filename"
+            },
+            "compressionCodec": "snappy"
+        },
+        "annotations": []
+    }
+}

@@ -82,13 +82,14 @@ SELECT
     m.MetadataSettingsOutput,
 	
 	-- ── Switch case Reference─────────────────────────────────
-	'SW_' 
-	+ RIGHT(ls_in.LinkedServiceName, LEN(ls_in.LinkedServiceName) - 3) 
-	+ '_' 
-	+ UPPER(ff_in.Format) 
-	+ '_' 
-	+ RIGHT(ls_out.LinkedServiceName, LEN(ls_out.LinkedServiceName) - 3) 
-	+ '_' + UPPER(ff_out.Format) AS SwitchCaseRef,  
+	-- COALESCE handles table-based sources (e.g. Azure SQL) where FileFormat is NULL
+	'SW_'
+	+ RIGHT(ls_in.LinkedServiceName, LEN(ls_in.LinkedServiceName) - 3)
+	+ '_'
+	+ COALESCE(UPPER(ff_in.Format), 'TABLE')
+	+ '_'
+	+ RIGHT(ls_out.LinkedServiceName, LEN(ls_out.LinkedServiceName) - 3)
+	+ '_' + COALESCE(UPPER(ff_out.Format), 'TABLE') AS SwitchCaseRef,
 
 
     -- ── Decoded flags ─────────────────────────────────────────────

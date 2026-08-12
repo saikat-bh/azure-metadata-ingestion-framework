@@ -1,0 +1,26 @@
+{
+    "name": "DS_ASQL_TABLE",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "AzureSqlTable",
+        "description": "Generic Azure SQL dataset. Holds only the connection (serverName, databaseName). The actual SQL query is defined in MetadataSettingsInput.Query and passed to the Copy activity sqlReaderQuery at runtime, supporting both full and incremental load patterns.",
+        "parameters": {
+            "serverName": {
+                "type": "String"
+            },
+            "databaseName": {
+                "type": "String"
+            }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ASQL_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": {
+                "serverName": "@dataset().serverName",
+                "databaseName": "@dataset().databaseName"
+            }
+        },
+        "typeProperties": {},
+        "annotations": []
+    }
+}

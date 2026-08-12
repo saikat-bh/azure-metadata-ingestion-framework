@@ -1,0 +1,352 @@
+{
+    "name": "PL_ASQL_ADLS_FULL_INGRESS",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Full refresh ingestion pipeline from Azure SQL to ADLS Gen2. Looks up all active jobs for the given trigger from EDP_Metadata.MasterRef, then processes them in parallel. A Switch activity routes each job to the correct Copy activity based on the output file format (CSV, Parquet, or JSON).",
+        "parameters": {
+            "TriggerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataServerName": {
+                "type": "string",
+                "defaultValue": ""
+            },
+            "MetadataDatabaseName": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "activities": [
+            {
+                "name": "Lookup_Metadata",
+                "description": "Fetches all active Full Refresh Ingress jobs for the given TriggerName from EDP_Metadata.MasterRef.",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM EDP_Metadata.MasterRef WHERE Trigger_Name = ''', pipeline().parameters.TriggerName, ''' AND IsActive = ''Active'' AND Load_Type = ''Full_Refresh'' AND ActivityType = ''Ingress''')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_TABLE",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "serverName": {
+                                "value": "@pipeline().parameters.MetadataServerName",
+                                "type": "Expression"
+                            },
+                            "databaseName": {
+                                "value": "@pipeline().parameters.MetadataDatabaseName",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEach_Jobs",
+                "description": "Iterates over all active jobs returned by the metadata lookup and processes them in parallel.",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_Metadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Lookup_Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 5,
+                    "activities": [
+                        {
+                            "name": "Switch_OutputFormat",
+                            "description": "Routes each job to the correct Copy activity based on SwitchCaseRef (source LS + input format + output LS + output format).",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().SwitchCaseRef",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_CSV",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ASQL_to_ADLS_CSV",
+                                                "description": "Copies data from Azure SQL (query from MetadataSettingsInput) to ADLS Gen2 as a delimited text file. Connection details and file path resolved from metadata at runtime.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "AzureSqlSource",
+                                                        "sqlReaderQuery": {
+                                                            "value": "@json(item().MetadataSettingsInput).Query",
+                                                            "type": "Expression"
+                                                        },
+                                                        "queryTimeout": "02:00:00",
+                                                        "partitionOption": "None"
+                                                    },
+                                                    "sink": {
+                                                        "type": "DelimitedTextSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "DelimitedTextWriteSettings",
+                                                            "quoteAllText": false,
+                                                            "fileExtension": ".csv"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ASQL_TABLE",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "serverName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                "type": "Expression"
+                                                            },
+                                                            "databaseName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_CSV",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": {
+                                                                "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                "type": "Expression"
+                                                            },
+                                                            "container": {
+                                                                "value": "@json(item().MetadataSettingsOutput).container",
+                                                                "type": "Expression"
+                                                            },
+                                                            "directory": {
+                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "type": "Expression"
+                                                            },
+                                                            "filename": {
+                                                                "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                "type": "Expression"
+                                                            },
+                                                            "columnDelimiter": {
+                                                                "value": "@item().OutputColDelimitter",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_PARQUET",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ASQL_to_ADLS_PARQUET",
+                                                "description": "Copies data from Azure SQL (query from MetadataSettingsInput) to ADLS Gen2 as a Parquet file. Connection details and file path resolved from metadata at runtime.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "AzureSqlSource",
+                                                        "sqlReaderQuery": {
+                                                            "value": "@json(item().MetadataSettingsInput).Query",
+                                                            "type": "Expression"
+                                                        },
+                                                        "queryTimeout": "02:00:00",
+                                                        "partitionOption": "None"
+                                                    },
+                                                    "sink": {
+                                                        "type": "ParquetSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "ParquetWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ASQL_TABLE",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "serverName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                "type": "Expression"
+                                                            },
+                                                            "databaseName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_PARQUET",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": {
+                                                                "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                "type": "Expression"
+                                                            },
+                                                            "container": {
+                                                                "value": "@json(item().MetadataSettingsOutput).container",
+                                                                "type": "Expression"
+                                                            },
+                                                            "directory": {
+                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "type": "Expression"
+                                                            },
+                                                            "filename": {
+                                                                "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "SW_ASQL_SAMI_TABLE_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_ASQL_to_ADLS_JSON",
+                                                "description": "Copies data from Azure SQL (query from MetadataSettingsInput) to ADLS Gen2 as a JSON file. Connection details and file path resolved from metadata at runtime.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "AzureSqlSource",
+                                                        "sqlReaderQuery": {
+                                                            "value": "@json(item().MetadataSettingsInput).Query",
+                                                            "type": "Expression"
+                                                        },
+                                                        "queryTimeout": "02:00:00",
+                                                        "partitionOption": "None"
+                                                    },
+                                                    "sink": {
+                                                        "type": "JsonSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_ASQL_TABLE",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "serverName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).serverName",
+                                                                "type": "Expression"
+                                                            },
+                                                            "databaseName": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).databaseName",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": {
+                                                                "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                "type": "Expression"
+                                                            },
+                                                            "container": {
+                                                                "value": "@json(item().MetadataSettingsOutput).container",
+                                                                "type": "Expression"
+                                                            },
+                                                            "directory": {
+                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "type": "Expression"
+                                                            },
+                                                            "filename": {
+                                                                "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}
