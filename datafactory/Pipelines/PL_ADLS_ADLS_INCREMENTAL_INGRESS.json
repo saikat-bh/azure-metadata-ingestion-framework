@@ -203,7 +203,7 @@
                                                                         "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -316,7 +316,7 @@
                                                                         "name": "Update_Watermark_CSV_to_PARQUET",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -421,7 +421,7 @@
                                                                         "name": "Update_Watermark_CSV_to_JSON",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -525,7 +525,7 @@
                                                                         "name": "Update_Watermark_PARQUET_to_CSV",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -627,7 +627,7 @@
                                                                         "name": "Update_Watermark_PARQUET_to_PARQUET",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -730,7 +730,7 @@
                                                                         "name": "Update_Watermark_PARQUET_to_JSON",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -835,7 +835,7 @@
                                                                         "name": "Update_Watermark_JSON_to_CSV",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -939,7 +939,7 @@
                                                                         "name": "Update_Watermark_JSON_to_PARQUET",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -1042,7 +1042,7 @@
                                                                         "name": "Update_Watermark_JSON_to_JSON",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {

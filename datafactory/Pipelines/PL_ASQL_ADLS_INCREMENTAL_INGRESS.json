@@ -228,7 +228,7 @@
                                                                         "description": "Advances Watermark_Value to the current UTC time. Only runs after a confirmed successful copy with at least one row transferred (edge cases #3 and #4). Uses Metadata_ID to identify the correct Watermark row via MetadataRef FK.",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -391,7 +391,7 @@
                                                                         "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
@@ -554,7 +554,7 @@
                                                                         "description": "Advances Watermark_Value to current UTC time after confirmed successful copy with rows transferred.",
                                                                         "type": "Script",
                                                                         "dependsOn": [],
-                                                                        "linkedService": {
+                                                                        "linkedServiceName": {
                                                                             "referenceName": "LS_ASQL_SAMI",
                                                                             "type": "LinkedServiceReference",
                                                                             "parameters": {
