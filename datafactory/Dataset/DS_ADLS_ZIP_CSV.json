@@ -1,0 +1,35 @@
+{
+    "name": "DS_ADLS_ZIP_CSV",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "DelimitedText",
+        "description": "Parameterized zip-compressed CSV dataset on ADLS Gen2. ADF automatically decompresses the .zip archive (ZipDeflate codec) before parsing the inner delimited content. If the zip contains multiple files they are all read as one logical source.",
+        "parameters": {
+            "URL": { "type": "String" },
+            "container": { "type": "String" },
+            "directory": { "type": "String" },
+            "filename": { "type": "String" },
+            "columnDelimiter": { "type": "String" }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": { "URL": "@dataset().URL" }
+        },
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "@dataset().container",
+                "folderPath": "@dataset().directory",
+                "fileName": "@dataset().filename"
+            },
+            "columnDelimiter": "@dataset().columnDelimiter",
+            "compressionCodec": "ZipDeflate",
+            "escapeChar": "\\",
+            "quoteChar": "\"",
+            "firstRowAsHeader": true,
+            "encodingName": "UTF-8"
+        },
+        "annotations": []
+    }
+}

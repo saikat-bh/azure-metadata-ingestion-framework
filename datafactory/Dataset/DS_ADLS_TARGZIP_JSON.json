@@ -1,0 +1,29 @@
+{
+    "name": "DS_ADLS_TARGZIP_JSON",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "Json",
+        "description": "Parameterized tar.gz-compressed JSON dataset on ADLS Gen2. ADF automatically decompresses the .tar.gz archive (TarGzip codec) and reads the inner JSON content. Assumes tabular JSON (array of flat objects).",
+        "parameters": {
+            "URL": { "type": "String" },
+            "container": { "type": "String" },
+            "directory": { "type": "String" },
+            "filename": { "type": "String" }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": { "URL": "@dataset().URL" }
+        },
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "@dataset().container",
+                "folderPath": "@dataset().directory",
+                "fileName": "@dataset().filename"
+            },
+            "compressionCodec": "TarGzip"
+        },
+        "annotations": []
+    }
+}

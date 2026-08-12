@@ -1,0 +1,28 @@
+{
+    "name": "DS_ADLS_BINARY",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "Binary",
+        "description": "Parameterized binary dataset on ADLS Gen2. Copies files as raw bytes without any format parsing or decompression. Use for .zip, .tar.gz, or any opaque binary file that must be staged as-is rather than parsed. Source and target are both binary - no format conversion is possible with this dataset.",
+        "parameters": {
+            "URL": { "type": "String" },
+            "container": { "type": "String" },
+            "directory": { "type": "String" },
+            "filename": { "type": "String" }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": { "URL": "@dataset().URL" }
+        },
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "@dataset().container",
+                "folderPath": "@dataset().directory",
+                "fileName": "@dataset().filename"
+            }
+        },
+        "annotations": []
+    }
+}

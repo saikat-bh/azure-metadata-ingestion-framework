@@ -1,0 +1,29 @@
+{
+    "name": "DS_ADLS_ZIP_JSON",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "Json",
+        "description": "Parameterized zip-compressed JSON dataset on ADLS Gen2. ADF automatically decompresses the .zip archive (ZipDeflate codec) before parsing the inner JSON content. Assumes tabular JSON (array of flat objects).",
+        "parameters": {
+            "URL": { "type": "String" },
+            "container": { "type": "String" },
+            "directory": { "type": "String" },
+            "filename": { "type": "String" }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_SAMI",
+            "type": "LinkedServiceReference",
+            "parameters": { "URL": "@dataset().URL" }
+        },
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "@dataset().container",
+                "folderPath": "@dataset().directory",
+                "fileName": "@dataset().filename"
+            },
+            "compressionCodec": "ZipDeflate"
+        },
+        "annotations": []
+    }
+}
