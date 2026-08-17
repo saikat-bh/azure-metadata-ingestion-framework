@@ -1,0 +1,34 @@
+{
+    "name": "LS_SFTP_BASIC",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "type": "Sftp",
+        "parameters": {
+            "host": {
+                "type": "String"
+            },
+            "port": {
+                "type": "Int",
+                "defaultValue": 22
+            },
+            "userName": {
+                "type": "String"
+            },
+            "password": {
+                "type": "String"
+            }
+        },
+        "typeProperties": {
+            "host": "@{linkedService().host}",
+            "port": "@{linkedService().port}",
+            "authenticationType": "Basic",
+            "userName": "@{linkedService().userName}",
+            "password": {
+                "type": "SecureString",
+                "value": "@{linkedService().password}"
+            }
+        },
+        "annotations": [],
+        "description": "SFTP linked service using Basic (username/password) authentication. host, port, userName, and password are resolved at runtime from EDP_Metadata.LinkedServiceRef via the pipeline Lookup activity."
+    }
+}

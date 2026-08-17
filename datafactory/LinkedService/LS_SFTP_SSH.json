@@ -1,0 +1,41 @@
+{
+    "name": "LS_SFTP_SSH",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "type": "Sftp",
+        "parameters": {
+            "host": {
+                "type": "String"
+            },
+            "port": {
+                "type": "Int",
+                "defaultValue": 22
+            },
+            "userName": {
+                "type": "String"
+            },
+            "privateKeyContent": {
+                "type": "String"
+            },
+            "passPhrase": {
+                "type": "String"
+            }
+        },
+        "typeProperties": {
+            "host": "@{linkedService().host}",
+            "port": "@{linkedService().port}",
+            "authenticationType": "SshPublicKey",
+            "userName": "@{linkedService().userName}",
+            "privateKeyContent": {
+                "type": "SecureString",
+                "value": "@{linkedService().privateKeyContent}"
+            },
+            "passPhrase": {
+                "type": "SecureString",
+                "value": "@{linkedService().passPhrase}"
+            }
+        },
+        "annotations": [],
+        "description": "SFTP linked service using SSH public key authentication. host, port, userName, privateKeyContent, and passPhrase are resolved at runtime from EDP_Metadata.LinkedServiceRef via the pipeline Lookup activity."
+    }
+}
