@@ -1,0 +1,27 @@
+{
+    "name": "DS_REST_JSON",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "type": "RestResource",
+        "description": "Parameterized JSON REST resource. Base URL is resolved from the linked service; relativeUrl (the endpoint/query path) is resolved at runtime from EDP_Metadata.MetadataSettingsInput via the pipeline Lookup activity.",
+        "parameters": {
+            "URL": {
+                "type": "String"
+            },
+            "relativeUrl": {
+                "type": "String"
+            }
+        },
+        "linkedServiceName": {
+            "referenceName": "LS_REST_ANON",
+            "type": "LinkedServiceReference",
+            "parameters": {
+                "URL": "@dataset().URL"
+            }
+        },
+        "typeProperties": {
+            "relativeUrl": "@dataset().relativeUrl"
+        },
+        "annotations": []
+    }
+}

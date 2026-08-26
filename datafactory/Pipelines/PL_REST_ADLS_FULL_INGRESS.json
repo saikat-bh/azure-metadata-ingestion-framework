@@ -1,0 +1,169 @@
+{
+    "name": "PL_REST_ADLS_FULL_INGRESS",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Full refresh ingestion pipeline from a REST API to ADLS Gen2 landing. Looks up all active jobs for the given trigger from EDP_Metadata.MasterRef, then processes them in parallel. A Switch activity routes each job to the correct Copy activity based on the input REST auth type and output file format.",
+        "parameters": {
+            "TriggerName": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "activities": [
+            {
+                "name": "Lookup_Metadata",
+                "description": "Fetches all active Full Refresh Ingress jobs for the given TriggerName from EDP_Metadata.MasterRef.",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM EDP_Metadata.MasterRef WHERE Trigger_Name = ''', pipeline().parameters.TriggerName, ''' AND IsActive = ''Active'' AND Load_Type = ''Full_Refresh'' AND ActivityType = ''Ingress''')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_TABLE",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "serverName": {
+                                "value": "@pipeline().globalParameters.MetadataServerName",
+                                "type": "Expression"
+                            },
+                            "databaseName": {
+                                "value": "@pipeline().globalParameters.MetadataDatabaseName",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEach_Jobs",
+                "description": "Iterates over all active jobs returned by the metadata lookup and processes them in parallel.",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_Metadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Lookup_Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 5,
+                    "activities": [
+                        {
+                            "name": "Switch_OutputFormat",
+                            "description": "Routes each job to the correct Copy activity based on SwitchCaseRef (source LS + input format + output LS + output format).",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().SwitchCaseRef",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "SW_REST_ANON_JSON_ADLS_SAMI_JSON",
+                                        "activities": [
+                                            {
+                                                "name": "Copy_REST_to_ADLS_JSON",
+                                                "description": "Calls the REST API (base URL from InputLinkedServiceConnectionString, relativeUrl from MetadataSettingsInput) and lands the raw JSON response in ADLS Gen2. No transformation - the response is copied as-is, since REST payloads are typically nested and not tabular.",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "RestSource",
+                                                        "httpRequestTimeout": "00:01:40",
+                                                        "requestInterval": "00.00:00:00.010",
+                                                        "requestMethod": "GET"
+                                                    },
+                                                    "sink": {
+                                                        "type": "JsonSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "JsonWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_REST_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": {
+                                                                "value": "@json(item().InputLinkedServiceConnectionString).URL",
+                                                                "type": "Expression"
+                                                            },
+                                                            "relativeUrl": {
+                                                                "value": "@json(item().MetadataSettingsInput).relativeUrl",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_JSON",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "URL": {
+                                                                "value": "@json(item().OutputLinkedServiceConnectionString).URL",
+                                                                "type": "Expression"
+                                                            },
+                                                            "container": {
+                                                                "value": "@json(item().MetadataSettingsOutput).container",
+                                                                "type": "Expression"
+                                                            },
+                                                            "directory": {
+                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "type": "Expression"
+                                                            },
+                                                            "filename": {
+                                                                "value": "@json(item().MetadataSettingsOutput).filename",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}

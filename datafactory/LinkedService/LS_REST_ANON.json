@@ -1,0 +1,19 @@
+{
+    "name": "LS_REST_ANON",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "type": "RestService",
+        "parameters": {
+            "URL": {
+                "type": "String"
+            }
+        },
+        "typeProperties": {
+            "url": "@{linkedService().URL}",
+            "enableServerCertificateValidation": true,
+            "authenticationType": "Anonymous"
+        },
+        "annotations": [],
+        "description": "REST API linked service using Anonymous authentication (no credentials). URL is resolved at runtime from EDP_Metadata.LinkedServiceRef via the pipeline Lookup activity."
+    }
+}
