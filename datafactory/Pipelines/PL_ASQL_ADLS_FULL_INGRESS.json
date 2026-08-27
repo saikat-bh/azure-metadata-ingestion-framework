@@ -3,6 +3,9 @@
     "type": "Microsoft.DataFactory/factories/pipelines",
     "properties": {
         "description": "Full refresh ingestion pipeline from Azure SQL to ADLS Gen2. Looks up all active jobs for the given trigger from EDP_Metadata.MasterRef, then processes them in parallel. A Switch activity routes each job to the correct Copy activity based on the output file format (CSV, Parquet, or JSON).",
+        "folder": {
+            "name": "Ingress"
+        },
         "parameters": {
             "TriggerName": {
                 "type": "string",
