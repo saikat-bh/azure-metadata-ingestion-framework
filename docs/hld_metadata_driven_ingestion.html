@@ -492,7 +492,7 @@ td code,th code{
 
       <div class="nav-group">Pipelines</div>
       <a href="#catalog">Pipeline Catalog</a>
-      <a href="#datasets">Datasets &amp; Global Params</a>
+      <a href="#datasets">Datasets, Linked Services &amp; Params</a>
 
       <div class="nav-group">Load Patterns</div>
       <a href="#load-patterns">Load Patterns</a>
@@ -532,7 +532,7 @@ td code,th code{
       <h2>Executive Summary</h2>
       <p>The Metadata-Driven Ingestion Framework provides a single, reusable, and centrally governed data integration layer on Azure. Instead of building a dedicated pipeline for each data source, a suite of generic Azure Data Factory pipelines covers all ingestion scenarios — with runtime behaviour driven entirely by metadata stored in a central Azure SQL schema (<code>EDP_Metadata</code>).</p>
       <p>Onboarding a new data source requires no pipeline development or deployment. A metadata record is inserted into the control table and the existing generic pipeline automatically handles the ingestion — resolving connections, dataset types, file formats, column delimiters, load strategy, and target paths at runtime from the metadata.</p>
-      <p>The framework supports both <strong>Full Refresh</strong> and <strong>Incremental (Delta)</strong> load patterns, Ingress and Egress activity directions, and a broad range of source and target connectors across file-based and database systems. As of v2.0, four pipelines covering Azure SQL and ADLS Gen2 source/target combinations are fully deployed and operational, with support for standard formats (CSV, Parquet, JSON), compressed sources (GZIP, ZIP, TarGzip), and binary file pass-through.</p>
+      <p>The framework supports both <strong>Full Refresh</strong> and <strong>Incremental (Delta)</strong> load patterns, Ingress and Egress activity directions, and a broad range of source and target connectors across file-based and database systems. As of v2.0, five pipelines are fully deployed and operational, covering Azure SQL, ADLS Gen2, and REST API sources — with support for standard formats (CSV, Parquet, JSON), compressed sources (GZIP, ZIP, TarGzip), binary file pass-through, and raw JSON landing from REST endpoints.</p>
       <p>Configuration-level parameters shared across all pipelines — such as the metadata server and database coordinates — are managed as <strong>ADF Global Parameters</strong>, removing them entirely from individual pipeline definitions and providing a single configuration point at the factory level.</p>
     </section>
 
@@ -746,12 +746,12 @@ td code,th code{
     <section id="catalog">
       <div class="section-label">06 — Deployed Pipelines</div>
       <h2>Pipeline Catalog</h2>
-      <p>Four generic pipelines are deployed in <code>adfclaude01</code>. Each pipeline is driven entirely by metadata — no source-specific logic exists in any pipeline definition. The only pipeline-level parameter is <code>TriggerName</code>, which scopes the Lookup to the correct set of jobs.</p>
+      <p>Five generic pipelines are deployed in <code>adfclaude01</code>, all grouped under the <strong>Ingress</strong> folder in ADF Studio. Each pipeline is driven entirely by metadata — no source-specific logic exists in any pipeline definition. The only pipeline-level parameter across all five is <code>TriggerName</code>, which scopes the Lookup to the correct set of jobs.</p>
 
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Pipeline</th><th>Source</th><th>Target</th><th>Load Type</th><th>Switch Cases</th><th>ForEach Activities</th></tr>
+            <tr><th>Pipeline</th><th>Source</th><th>Target</th><th>Load Type</th><th>Switch Activities / Cases</th><th>ForEach Activities</th></tr>
           </thead>
           <tbody>
             <tr>
@@ -759,7 +759,7 @@ td code,th code{
               <td>Azure SQL</td>
               <td>ADLS Gen2</td>
               <td><span class="badge">Full Refresh</span></td>
-              <td>3</td>
+              <td>1 Switch, 3 cases</td>
               <td>1 Copy per case</td>
             </tr>
             <tr>
@@ -767,15 +767,15 @@ td code,th code{
               <td>Azure SQL</td>
               <td>ADLS Gen2</td>
               <td><span class="badge accent">Incremental</span></td>
-              <td>3</td>
-              <td>5 per case (Validate + Fail or Copy + Check + Update)</td>
+              <td>1 Switch, 3 cases</td>
+              <td>Validate_Watermark (sibling) + Copy + Update_Watermark per case</td>
             </tr>
             <tr>
               <td><code>PL_ADLS_ADLS_FULL_INGRESS</code></td>
               <td>ADLS Gen2</td>
               <td>ADLS Gen2</td>
               <td><span class="badge">Full Refresh</span></td>
-              <td>28</td>
+              <td>2 Switches, 28 cases total</td>
               <td>1 Copy per case</td>
             </tr>
             <tr>
@@ -783,15 +783,24 @@ td code,th code{
               <td>ADLS Gen2</td>
               <td>ADLS Gen2</td>
               <td><span class="badge accent">Incremental</span></td>
-              <td>28</td>
-              <td>5 per original case; 3 per compressed/binary case</td>
+              <td>2 Switches, 28 cases total</td>
+              <td>Validate_Watermark (sibling) + Copy + Update_Watermark per case</td>
+            </tr>
+            <tr>
+              <td><code>PL_REST_ADLS_FULL_INGRESS</code></td>
+              <td>REST API</td>
+              <td>ADLS Gen2</td>
+              <td><span class="badge">Full Refresh</span></td>
+              <td>1 Switch, 1 case</td>
+              <td>1 Copy per case (raw JSON landing, no transformation)</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>ADLS Pipeline Switch Cases (28 total)</h3>
-      <p>The ADLS-to-ADLS pipelines cover all source-format-to-target-format combinations, including compressed source variants and binary pass-through:</p>
+      <h3>ADLS Pipeline Switch Cases (28 total, split across 2 Switch activities)</h3>
+      <p>ADF enforces a hard limit of <strong>25 cases per Switch activity</strong>. The ADLS pipelines use two sibling Switch activities inside ForEach: <code>Switch_OutputFormat</code> (10 uncompressed cases) and <code>Switch_OutputFormat_Compressed</code> (18 compressed/binary cases). Each Switch has an empty default so a SwitchCaseRef destined for the other Switch is a silent no-op.</p>
+      <p>All 28 cases cover source-format-to-target-format combinations including compressed source variants and binary pass-through:</p>
 
       <div class="table-wrap">
         <table>
@@ -843,6 +852,25 @@ td code,th code{
             <tr><td><code>DS_ADLS_ZIP_JSON</code></td><td>Json</td><td>JSON</td><td>ZipDeflate</td><td><code>LS_ADLS_SAMI</code></td></tr>
             <tr><td><code>DS_ADLS_TARGZIP_JSON</code></td><td>Json</td><td>JSON</td><td>TarGzip</td><td><code>LS_ADLS_SAMI</code></td></tr>
             <tr><td><code>DS_ADLS_BINARY</code></td><td>Binary</td><td>Any binary</td><td>None (pass-through)</td><td><code>LS_ADLS_SAMI</code></td></tr>
+            <tr><td><code>DS_REST_JSON</code></td><td>RestResource</td><td>JSON (REST response)</td><td>—</td><td><code>LS_REST_ANON</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Deployed Linked Services</h3>
+      <p>All linked services are fully parameterized — connection details are resolved at runtime from <code>LinkedServiceRef.LinkedServiceConnectionString</code> JSON in the metadata. No server name, URL, credential, or key is hardcoded in any linked service definition.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Linked Service</th><th>ADF Connector</th><th>Auth Type</th><th>Parameters</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>LS_ADLS_SAMI</code></td><td>AzureBlobFS</td><td>System-Assigned Managed Identity</td><td><code>URL</code></td></tr>
+            <tr><td><code>LS_ASQL_SAMI</code></td><td>AzureSqlDatabase v2.0</td><td>System-Assigned Managed Identity</td><td><code>serverName</code>, <code>databaseName</code></td></tr>
+            <tr><td><code>LS_SFTP_BASIC</code></td><td>Sftp</td><td>Basic (username/password)</td><td><code>host</code>, <code>port</code>, <code>userName</code>, <code>password</code> (SecureString)</td></tr>
+            <tr><td><code>LS_SFTP_SSH</code></td><td>Sftp</td><td>SSH Public Key</td><td><code>host</code>, <code>port</code>, <code>userName</code>, <code>privateKeyContent</code>, <code>passPhrase</code> (SecureString)</td></tr>
+            <tr><td><code>LS_REST_ANON</code></td><td>RestService</td><td>Anonymous</td><td><code>URL</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -873,7 +901,7 @@ td code,th code{
       </div>
 
       <div class="callout">
-        All four deployed pipelines (<code>PL_ASQL_ADLS_FULL_INGRESS</code>, <code>PL_ASQL_ADLS_INCREMENTAL_INGRESS</code>, <code>PL_ADLS_ADLS_FULL_INGRESS</code>, <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code>) reference these global parameters. The only remaining pipeline-level parameter across all four is <code>TriggerName</code>, which scopes the Lookup query to the correct set of active jobs.
+        All five deployed pipelines reference these global parameters for Lookup dataset resolution. The only pipeline-level parameter across all five is <code>TriggerName</code>, which scopes the Lookup query to the correct set of active jobs.
       </div>
     </section>
 
@@ -971,12 +999,16 @@ td code,th code{
             <span class="edge-case-title">Null Watermark Validation</span>
             <span class="badge warn" style="margin-left:auto">Guard</span>
           </div>
-          <p><strong>Risk:</strong> If <code>Watermark_Column</code> or <code>Watermark_Value</code> is null in the metadata, the incremental source filter cannot be constructed. The copy would proceed unfiltered, loading the entire source on every run — identical to a full refresh but without the watermark update, silently corrupting the incremental state.</p>
-          <p><strong>Implementation:</strong> An <code>IfCondition</code> activity (<em>Validate_Watermark</em>) evaluates:</p>
-          <div class="code-block">@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))</div>
-          <p>If the condition is true (either field is null), a <em>Fail</em> activity fires immediately, halting the pipeline run with error code <strong>WM001</strong> and a message identifying the <code>Metadata_Job</code> and <code>Metadata_ID</code>. The Copy activity never executes.</p>
+          <p><strong>Risk:</strong> If <code>Watermark_Column</code> or <code>Watermark_Value</code> is null in the metadata, the incremental source filter cannot be constructed. The copy would proceed unfiltered, loading the entire source on every run — silently corrupting the incremental state.</p>
+          <p><strong>Implementation:</strong> An <code>IfCondition</code> activity (<em>Validate_Watermark</em>) is placed as a <strong>sibling of the Switch activity</strong> inside ForEach. The Switch depends on <em>Validate_Watermark</em> succeeding. If either watermark field is null, a <em>Fail_Invalid_Watermark</em> activity fires with error code <strong>WM001</strong>, halting that ForEach iteration before the Switch — and therefore the Copy — ever runs.</p>
+          <div class="code-block">/* Validate_Watermark IfCondition expression: */
+@or(equals(item().Watermark_Column, null), equals(item().Watermark_Value, null))
+
+/* Switch_OutputFormat dependency: */
+"dependsOn": [{ "activity": "Validate_Watermark", "dependencyConditions": ["Succeeded"] }]</div>
+          <p><strong>Why a sibling, not nested:</strong> ADF does not permit control flow activities (<code>IfCondition</code>, <code>Switch</code>, <code>ForEach</code>, <code>Until</code>) to be nested inside a Switch case. Promoting <em>Validate_Watermark</em> to ForEach level — with the Switch depending on it — achieves the same guard without violating this constraint.</p>
           <div class="edge-case-scope">
-            <strong>Scope:</strong> All 3 ASQL incremental cases &nbsp;|&nbsp; Original 9 uncompressed ADLS incremental cases &nbsp;|&nbsp; <em>Not applied</em> to 19 compressed/binary ADLS cases (activity limit constraint — see below)
+            <strong>Scope:</strong> All incremental cases in both <code>PL_ASQL_ADLS_INCREMENTAL_INGRESS</code> and <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> — the guard fires once per ForEach iteration, before either Switch executes
           </div>
         </div>
 
@@ -987,16 +1019,20 @@ td code,th code{
             <span class="edge-case-title">Zero-Rows / Zero-Files Guard</span>
             <span class="badge warn" style="margin-left:auto">Guard</span>
           </div>
-          <p><strong>Risk:</strong> If the watermark-filtered source query returns zero rows (e.g. no new records since the last run, or a temporary data gap), advancing the watermark would shift the time boundary forward — potentially causing the next run to miss records that arrive late but within the original window.</p>
-          <p><strong>Implementation:</strong> An <code>IfCondition</code> activity (<em>Check_Rows_Copied</em>) evaluates the Copy activity's output metric after the copy completes:</p>
-          <div class="code-block">/* Standard format cases (CSV, Parquet, JSON): */
-@greater(activity('Copy_...').output.rowsCopied, 0)
+          <p><strong>Risk:</strong> If the watermark-filtered source query returns zero rows (no new records since the last run, or a data gap), advancing the watermark would shift the boundary forward — causing the next run to miss records that arrive late within the original window.</p>
+          <p><strong>Implementation:</strong> Rather than a separate <code>IfCondition</code> activity, the zero-rows check is folded directly into the <em>Update_Watermark</em> Script text as an <code>@if()</code> expression. If <code>rowsCopied &gt; 0</code> (or <code>filesRead &gt; 0</code> for binary), the UPDATE runs; otherwise the script executes a no-op <code>SELECT 1</code> and the watermark stays unchanged:</p>
+          <div class="code-block">/* Standard cases — rowsCopied: */
+@if(greater(activity('Copy_...').output.rowsCopied, 0),
+    concat('UPDATE w SET w.Watermark_Value = ... WHERE m.Metadata_ID = ', string(item().Metadata_ID)),
+    'SELECT 1')
 
-/* Binary case: */
-@greater(activity('Copy_ADLS_BINARY_to_ADLS_BINARY').output.filesRead, 0)</div>
-          <p>The <em>Update_Watermark</em> Script activity is nested in the <code>ifTrue</code> branch only. If zero rows (or zero files) were transferred, the watermark is not advanced and the same time window is retried on the next run.</p>
+/* Binary case — filesRead: */
+@if(greater(activity('Copy_ADLS_BINARY_to_ADLS_BINARY').output.filesRead, 0),
+    concat('UPDATE w SET w.Watermark_Value = ...'),
+    'SELECT 1')</div>
+          <p>This approach eliminates the need for a dedicated <code>IfCondition</code> activity, keeping each Switch case to two activities (Copy + Update_Watermark) while preserving the zero-rows safety guarantee.</p>
           <div class="edge-case-scope">
-            <strong>Scope:</strong> All 28 cases in both ADLS incremental and all 3 ASQL incremental cases &nbsp;|&nbsp; Binary case uses <code>filesRead</code>; all other cases use <code>rowsCopied</code>
+            <strong>Scope:</strong> All incremental cases in both pipelines &nbsp;|&nbsp; Binary case checks <code>filesRead</code>; all other cases check <code>rowsCopied</code>
           </div>
         </div>
 
@@ -1007,12 +1043,12 @@ td code,th code{
             <span class="edge-case-title">Copy Failure Guard</span>
             <span class="badge warn" style="margin-left:auto">Guard</span>
           </div>
-          <p><strong>Risk:</strong> If the Copy activity fails mid-run (network error, schema mismatch, throttling, etc.), a watermark update that runs regardless would lock the pipeline into a future time window — permanently skipping all records from the failed run's interval.</p>
-          <p><strong>Implementation:</strong> The <em>Check_Rows_Copied</em> (<code>IfCondition</code>) activity has an explicit dependency on the Copy activity with condition <strong>Succeeded</strong>. If the Copy fails, the <code>IfCondition</code> — and therefore the <em>Update_Watermark</em> Script activity — is skipped entirely. The watermark remains at the last known good boundary, ensuring the next retry re-processes the same time window.</p>
-          <div class="code-block">/* Dependency condition on Check_Rows_Copied: */
+          <p><strong>Risk:</strong> If the Copy activity fails mid-run (network error, schema mismatch, throttling), a watermark update that runs regardless would lock the pipeline into a future time window — permanently skipping all records from the failed run's interval.</p>
+          <p><strong>Implementation:</strong> The <em>Update_Watermark</em> Script activity has a direct <strong>Succeeded</strong> dependency on the Copy activity. If the Copy fails, <em>Update_Watermark</em> is skipped entirely. The watermark remains at the last known good boundary, ensuring the next retry re-processes the same time window.</p>
+          <div class="code-block">/* Update_Watermark dependency: */
 "dependsOn": [{ "activity": "Copy_...", "dependencyConditions": ["Succeeded"] }]</div>
           <div class="edge-case-scope">
-            <strong>Scope:</strong> All 28 cases in both ADLS incremental and all 3 ASQL incremental cases
+            <strong>Scope:</strong> All incremental cases in both <code>PL_ASQL_ADLS_INCREMENTAL_INGRESS</code> and <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code>
           </div>
         </div>
 
@@ -1057,33 +1093,63 @@ td code,th code{
         <!-- Guard 6 -->
         <div class="edge-case-card">
           <div class="edge-case-header">
-            <span class="edge-case-code">AL001</span>
-            <span class="edge-case-title">ADF 120-Activity Limit Workaround</span>
+            <span class="edge-case-code">NC001</span>
+            <span class="edge-case-title">No Nested Control Activities</span>
             <span class="badge warn" style="margin-left:auto">Constraint</span>
           </div>
-          <p><strong>Constraint:</strong> Azure Data Factory enforces a hard limit of <strong>120 nested activities</strong> per pipeline. All activities at every nesting level — including activities inside <code>IfCondition</code> branches and Switch cases — count toward this total.</p>
-          <p><strong>Problem:</strong> <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> needed 28 Switch cases. Applying the full 5-activity pattern (Validate_Watermark + Fail + Copy + Check + Update) to all 28 cases would yield 143 activities total (28 × 5 + 3 = 143), exceeding the limit.</p>
-          <p><strong>Solution:</strong> The 19 compressed and binary cases use a simplified <strong>3-activity pattern</strong> (Copy + Check + Update), omitting the Validate_Watermark guard. The 9 original uncompressed cases retain the full 5-activity pattern:</p>
-          <div class="code-block">9 original cases  x  5 activities  =   45
-19 compressed/binary cases  x  3 activities  =   57
-3 outer activities (Lookup + ForEach + Switch)  =    3
-Total                                          = 105  (within limit)</div>
-          <p>The risk of omitting Validate_Watermark for the 19 new cases is accepted: metadata configuration quality controls (referential integrity in the Watermark table) should prevent null watermark states from occurring in practice. This constraint is documented here for operational awareness.</p>
+          <p><strong>Constraint:</strong> ADF does not allow control flow activities (<code>IfCondition</code>, <code>Switch</code>, <code>ForEach</code>, <code>Until</code>) to be nested inside another control flow activity of those same types. An <code>IfCondition</code> inside a Switch case, or a Switch inside an <code>IfCondition</code>, is a validation error.</p>
+          <p><strong>Impact on this framework:</strong> The original design placed <em>Validate_Watermark</em> inside each Switch case and <em>Check_Rows_Copied</em> inside the Copy success branch — both nested control activities. ADF rejected both pipelines on validation.</p>
+          <p><strong>Resolution:</strong></p>
+          <ul>
+            <li><em>Validate_Watermark</em> was promoted to a ForEach-level sibling of the Switch, with the Switch carrying a <code>Succeeded</code> dependency on it (see WM001).</li>
+            <li><em>Check_Rows_Copied</em> was eliminated entirely and its logic folded into the Update_Watermark Script as an <code>@if()</code> expression (see ZR001).</li>
+          </ul>
           <div class="edge-case-scope">
-            <strong>Scope:</strong> <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> only &nbsp;|&nbsp; No constraint on other pipelines (105 / 120 activities used)
+            <strong>Scope:</strong> Applies to all ADF pipelines — any design that requires conditional logic inside a Switch case must use expression-level branching (e.g. <code>@if()</code>) rather than a separate <code>IfCondition</code> activity
+          </div>
+        </div>
+
+        <!-- Guard 7 -->
+        <div class="edge-case-card">
+          <div class="edge-case-header">
+            <span class="edge-case-code">SW025</span>
+            <span class="edge-case-title">Switch 25-Case Limit</span>
+            <span class="badge warn" style="margin-left:auto">Constraint</span>
+          </div>
+          <p><strong>Constraint:</strong> ADF enforces a hard limit of <strong>25 cases per Switch activity</strong>. The ADLS pipelines originally had 28 cases in a single Switch, which exceeded this limit.</p>
+          <p><strong>Resolution:</strong> Each ADLS pipeline uses two sibling Switch activities inside ForEach:</p>
+          <ul>
+            <li><code>Switch_OutputFormat</code> — 10 uncompressed cases (CSV/Parquet/JSON sources × CSV/Parquet/JSON targets + Binary)</li>
+            <li><code>Switch_OutputFormat_Compressed</code> — 18 compressed cases (GZIP/ZIP/TarGzip × CSV/JSON sources × CSV/Parquet/JSON targets)</li>
+          </ul>
+          <p>Each Switch has an empty <code>defaultActivities</code> block. A SwitchCaseRef that does not match in one Switch silently no-ops there and is handled by the other Switch.</p>
+          <div class="code-block">ForEach inner activities (ADLS incremental):
+  Validate_Watermark          (IfCondition — WM001 guard)
+  Switch_OutputFormat         (10 cases × 2 activities = 20)
+  Switch_OutputFormat_Compressed (18 cases × 2 activities = 36)
+Outer: Lookup + ForEach = 2
+Total: 2 + 3 + 1 + 20 + 36 = 62  (well within 120-activity pipeline limit)</div>
+          <div class="edge-case-scope">
+            <strong>Scope:</strong> <code>PL_ADLS_ADLS_FULL_INGRESS</code> and <code>PL_ADLS_ADLS_INCREMENTAL_INGRESS</code> &nbsp;|&nbsp; Any future pipeline with more than 25 source/format combinations must use the same split-Switch pattern
           </div>
         </div>
 
       </div>
 
       <h3>Watermark Update — Script Activity</h3>
-      <p>When the zero-rows guard confirms data was transferred, the watermark is advanced using a Script activity connected to <code>LS_ASQL_SAMI</code> (the metadata database linked service). The SQL script updates the <code>Watermark</code> table via a join to <code>MetadataRef</code> using the current iteration's <code>Metadata_ID</code>:</p>
-      <div class="code-block">UPDATE w
-SET    w.Watermark_Value = CONVERT(DATETIME, '&lt;utcNow formatted yyyy-MM-dd HH:mm:ss&gt;')
-FROM   EDP_Metadata.Watermark w
-JOIN   EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID
-WHERE  m.Metadata_ID = &lt;item().Metadata_ID&gt;</div>
-      <p>The script uses a <code>NonQuery</code> command type and all values — the UTC timestamp and Metadata_ID — are dynamically resolved via ADF expressions. No watermark coordinates are hardcoded in the pipeline definition.</p>
+      <p>Each incremental Switch case contains a single <em>Update_Watermark</em> Script activity that depends on the Copy activity succeeding (CF001). The script text is an <code>@if()</code> expression that checks <code>rowsCopied</code> (or <code>filesRead</code> for binary) and either executes the UPDATE or falls back to a no-op <code>SELECT 1</code> (ZR001). The full expression for a standard case:</p>
+      <div class="code-block">@if(
+  greater(activity('Copy_...').output.rowsCopied, 0),
+  concat(
+    'UPDATE w SET w.Watermark_Value = CONVERT(DATETIME, ''',
+    formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss'),
+    ''') FROM EDP_Metadata.Watermark w ',
+    'JOIN EDP_Metadata.MetadataRef m ON m.Watermark_ID = w.Watermark_ID ',
+    'WHERE m.Metadata_ID = ', string(item().Metadata_ID)
+  ),
+  'SELECT 1'
+)</div>
+      <p>The script uses <code>commandType: NonQuery</code>, connected to <code>LS_ASQL_SAMI</code> with <code>serverName</code> and <code>databaseName</code> resolved from ADF Global Parameters. No watermark coordinates are hardcoded in the pipeline definition.</p>
     </section>
 
     <!-- ── 10 Naming Conventions ─────────────────────────────── -->
@@ -1121,7 +1187,9 @@ Examples:
 Examples:
   LS_ADLS_SAMI       ADLS Gen2 with System-Assigned Managed Identity
   LS_ASQL_SAMI       Azure SQL with System-Assigned Managed Identity (v2.0 -- serverName + databaseName)
-  LS_SFTP_BASIC      SFTP with Basic (username / password) authentication</div>
+  LS_SFTP_BASIC      SFTP with Basic (username/password) authentication
+  LS_SFTP_SSH        SFTP with SSH public key authentication
+  LS_REST_ANON       REST API with Anonymous authentication</div>
 
       <h3>Switch Case Reference</h3>
       <div class="code-block">SW_{InputLinkedService}_{InputFormat}_{OutputLinkedService}_{OutputFormat}
