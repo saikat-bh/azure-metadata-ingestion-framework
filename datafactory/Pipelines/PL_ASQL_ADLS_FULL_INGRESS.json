@@ -159,7 +159,7 @@
                                                                 "type": "Expression"
                                                             },
                                                             "directory": {
-                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "value": "@concat(json(item().MetadataSettingsOutput).directory, '/', formatDateTime(utcNow(), 'yyyy'), '/', formatDateTime(utcNow(), 'MM'), '/', formatDateTime(utcNow(), 'dd'))",
                                                                 "type": "Expression"
                                                             },
                                                             "filename": {
@@ -242,7 +242,7 @@
                                                                 "type": "Expression"
                                                             },
                                                             "directory": {
-                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "value": "@concat(json(item().MetadataSettingsOutput).directory, '/', formatDateTime(utcNow(), 'yyyy'), '/', formatDateTime(utcNow(), 'MM'), '/', formatDateTime(utcNow(), 'dd'))",
                                                                 "type": "Expression"
                                                             },
                                                             "filename": {
@@ -321,7 +321,7 @@
                                                                 "type": "Expression"
                                                             },
                                                             "directory": {
-                                                                "value": "@json(item().MetadataSettingsOutput).directory",
+                                                                "value": "@concat(json(item().MetadataSettingsOutput).directory, '/', formatDateTime(utcNow(), 'yyyy'), '/', formatDateTime(utcNow(), 'MM'), '/', formatDateTime(utcNow(), 'dd'))",
                                                                 "type": "Expression"
                                                             },
                                                             "filename": {
